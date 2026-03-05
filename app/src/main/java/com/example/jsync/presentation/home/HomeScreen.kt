@@ -1,36 +1,80 @@
 package com.example.jsync.presentation.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jsync.ui.theme.blue20
+import com.example.jsync.ui.theme.blue40
+import com.example.jsync.ui.theme.blue80
 
 @Preview(showSystemUi = true)
 @Composable
 fun HomeScreen() {
+    var searchTodos by remember{
+        mutableStateOf("")
+    }
+    var expanded by remember {
+        mutableStateOf(false)
+    }
     Scaffold(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize() , floatingActionButton = {
+            IconButton(onClick =  {} , colors = IconButtonDefaults.iconButtonColors(
+                containerColor = Color.Transparent , contentColor = Color.White
+            ) , modifier = Modifier
+                .clip(shape = CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(blue20, blue40, blue80)
+                    )
+                )) {
+                Icon(imageVector = Icons.Default.Add , contentDescription = "fab")
+            }
+        }
     ) {ip ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(ip).padding(horizontal = 16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(ip)
+                .padding(horizontal = 16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth() , 
@@ -50,10 +94,82 @@ fun HomeScreen() {
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = {}) {
+            val buttonWeight by animateFloatAsState(
+                targetValue = if (expanded) 0.2f else 1f,
+                label = "buttonWeight"
+            )
 
+            val textFieldWeight by animateFloatAsState(
+                targetValue = if (expanded) 0.8f else 0.0001f,
+                label = "textFieldWeight"
+            )
+
+            val textFieldAlpha by animateFloatAsState(
+                targetValue = if (expanded) 1f else 0f,
+                label = "alpha"
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                OutlinedTextField(
+                    value = searchTodos,
+                    onValueChange = { searchTodos = it },
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .weight(textFieldWeight)
+                        .alpha(textFieldAlpha),
+                    singleLine = true,
+                    placeholder = { Text("Search...") } ,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = blue40 ,
+                        unfocusedIndicatorColor = blue20
+                    )
+                )
+
+                Button(
+                    onClick = { expanded = !expanded },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .weight(buttonWeight)
+                        .fillMaxHeight()
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(blue20, blue40, blue80)
+                            ),
+                            shape = CircleShape
+                        )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = "search")
+
+                        AnimatedVisibility(visible = !expanded) {
+                            Text(
+                                text = "Search",
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
             }
+
         }
+
+    }
+
+    @Composable
+    fun TodoDisplay() {
 
     }
 }
