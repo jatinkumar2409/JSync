@@ -3,6 +3,7 @@ package com.example.jsync.presentation.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,13 +14,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Task
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.outlined.Task
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -42,11 +49,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.ui.theme.blue20
 import com.example.jsync.ui.theme.blue40
 import com.example.jsync.ui.theme.blue80
 
-@Preview(showSystemUi = true)
+//@Preview(showSystemUi = true)
 @Composable
 fun HomeScreen() {
     var searchTodos by remember{
@@ -168,8 +176,50 @@ fun HomeScreen() {
 
     }
 
-    @Composable
-    fun TodoDisplay() {
-
+}
+@Preview(showBackground = true)
+@Composable
+fun TaskItem(modifier: Modifier = Modifier , task : TaskDTO = TaskDTO(
+    id = "1",
+    taskName = "Sample Task",
+    dueAt = System.currentTimeMillis(),
+    type = 0,
+    priority = 1,
+    hasDone = true ,
+    tags = "sample"
+)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (task.hasDone) 0.dp else 4.dp
+                ), colors = CardDefaults.cardColors(
+                    containerColor = if (isSystemInDarkTheme()) Color.DarkGray else Color.White
+                )
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (task.hasDone) Icons.Default.TaskAlt else Icons.Outlined.Task,
+                        contentDescription = "tasks"
+                    )
+                    Text(
+                        text = task.taskName,
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "12:00 pm",
+                        color = Color.DarkGray
+                    )
+                }
+                    Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
     }
 }

@@ -7,5 +7,7 @@ data class TaskDTO(
     val type : Int ,
     val priority : Int ,
     val hasDone : Boolean ,
-    val tags : String
+    val tags : String ,
+    val isDeleted : Boolean,
+    val updatedAt : Long
 )

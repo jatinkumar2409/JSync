@@ -8,11 +8,13 @@ data class TaskEntity(
     @PrimaryKey(autoGenerate = false)
     val id : String ,
     val taskName : String ,
-    val dueTo : Long ,
+    val dueTo : Long? ,
     val type : Int ,
     val priority : Int ,
     val hasDone : Boolean ,
-    val tags : String
+    val tags : String ,
+    val isDeleted : Boolean ,
+    val updatedAt : Long
 )
 
 
