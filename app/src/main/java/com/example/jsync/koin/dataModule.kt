@@ -1,11 +1,16 @@
 package com.example.jsync.koin
 
 import com.example.jsync.data.auth.impls.AuthRepoImplementation
+import com.example.jsync.data.tasks.impls.TaskRepoImplementation
 import com.example.jsync.domain.auth.repos.AuthRepository
+import com.example.jsync.domain.tasks.repos.TaskRepository
 import org.koin.dsl.module
 
 val dataModule = module {
     single<AuthRepository> {
         AuthRepoImplementation()
+    }
+    single<TaskRepository>{
+        TaskRepoImplementation(get())
     }
 }

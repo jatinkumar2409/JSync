@@ -185,8 +185,11 @@ fun TaskItem(modifier: Modifier = Modifier , task : TaskDTO = TaskDTO(
     dueAt = System.currentTimeMillis(),
     type = 0,
     priority = 1,
-    hasDone = true ,
-    tags = "sample"
+    hasDone = true,
+    tags = "sample",
+    userId = "kldskld",
+    isDeleted = false,
+    updatedAt = 1L
 )) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Card(

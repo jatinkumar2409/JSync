@@ -2,6 +2,7 @@ package com.example.jsync.data.auth.impls
 import android.util.Log
 import com.example.jsync.core.helpers.GetClient
 import com.example.jsync.data.models.AuthTokens
+import com.example.jsync.data.models.ErrorResponse
 import com.example.jsync.domain.auth.repos.AuthRepository
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -73,5 +74,4 @@ private data class SignInObject(
     val email : String , val password: String
 )
 
-@Serializable
-data class ErrorResponse(val detail: String)
+

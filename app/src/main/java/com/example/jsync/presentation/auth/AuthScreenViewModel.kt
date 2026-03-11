@@ -6,6 +6,7 @@ import com.example.jsync.core.helpers.NetworkObserver
 import com.example.jsync.domain.auth.repos.AuthRepository
 import com.example.jsync.domain.auth.usecases.SignInUseCase
 import com.example.jsync.domain.auth.usecases.SignUpUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +34,7 @@ private val networkObserver : NetworkObserver
         }
     }
     fun observeNetwork(){
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             networkObserver.observeNetwork().collect { it ->
                 _networkStatus.value = it
             }
