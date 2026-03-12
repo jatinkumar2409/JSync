@@ -1,5 +1,6 @@
 package com.example.jsync.domain.auth.usecases
 
+import android.util.Log
 import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.domain.auth.repos.AuthRepository
 
@@ -8,7 +9,8 @@ class SignInUseCase(private val authRepo : AuthRepository , private val manageTo
         try {
             val result = authRepo.signIn( email , password)
             result.onSuccess { it ->
-                manageToken.saveTokens(it.accessToken , it.refreshToken)
+                Log.d("tag" , it.toString())
+                manageToken.saveTokens(it.accessToken , it.refreshToken ,it.userId)
                 onSuccess()
             }
             result.onFailure { it ->

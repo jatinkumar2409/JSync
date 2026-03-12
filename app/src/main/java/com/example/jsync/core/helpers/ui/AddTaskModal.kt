@@ -1,6 +1,7 @@
 package com.example.jsync.core.helpers.ui
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,12 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.ui.theme.blue20
 import com.example.jsync.ui.theme.blue40
 import com.example.jsync.ui.theme.blue80
@@ -28,21 +31,22 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.UUID
 
-@Preview(showSystemUi = true)
+//@Preview(showSystemUi = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskModal(
     onDismiss: () -> Unit = {},
     onAddTag: (String) -> Unit = {},
+    onAddTask : (TaskDTO) -> Unit = {} ,
+    networkStatus : Boolean ,
     tagsList: List<String> = listOf("Meeting", "Home", "General", "Undone")
 ) {
-
     var taskName by remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
-
+    val context = LocalContext.current
     val tags = remember { mutableStateListOf<String>() }
-
     val colors = remember {
         listOf(
             blue40,
@@ -64,7 +68,6 @@ fun AddTaskModal(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var timeDialog by remember { mutableStateOf(false) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -311,7 +314,28 @@ fun AddTaskModal(
             ) {
 
                 Button(
-                    onClick = {},
+                    onClick = {
+                        if(!networkStatus){
+                            Toast.makeText(context, "No Internet Connection", Toast.LENGTH_SHORT)
+                                .show()
+                            return@Button
+                        }
+                        if(taskName.trim().isEmpty()){
+                            Toast.makeText(context, "Task Name is empty", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        } 
+                        val task = TaskDTO(
+                            id = UUID.randomUUID().toString() ,
+                            taskName = taskName,
+                            userId = "", dueAt = dueTime ,
+                            type = taskTypeSelection,
+                            priority = prioritySelection,
+                            hasDone = false,
+                            tags = tags.joinToString(","),
+                            updatedAt = 0L
+                        )
+                      onAddTask(task)
+                    },
                     modifier = Modifier
                         .heightIn(min = 48.dp)
                         .fillMaxWidth(0.35f),

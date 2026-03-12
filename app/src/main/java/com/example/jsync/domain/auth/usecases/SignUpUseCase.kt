@@ -8,7 +8,7 @@ class SignUpUseCase(private val authRepo : AuthRepository , private val manageTo
         try {
             val result = authRepo.signUp(name , email , password)
             result.onSuccess { it ->
-                manageToken.saveTokens(it.accessToken , it.refreshToken)
+                manageToken.saveTokens(it.accessToken , it.refreshToken , it.userId)
                 onSuccess()
             }
             result.onFailure { it ->

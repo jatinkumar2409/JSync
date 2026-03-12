@@ -12,15 +12,17 @@ class manageToken(context : Context) {
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV ,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
-    fun saveTokens(access : String , refresh : String){
+    fun saveTokens(access : String , refresh : String , userId : String){
         prefs.edit {
             putString("access_token", access)
-                .putString("refresh_token", refresh)
+            putString("refresh_token", refresh)
+            putString("user_id" , userId)
         }
 
     }
     fun getAccessToken() = prefs.getString("access_token" , null)
     fun getRefreshToken() = prefs.getString("refresh_token" , null)
+    fun getUserId() = prefs.getString("user_id" , null)
     fun clearToken(){
         prefs.edit { clear() }
     }

@@ -19,6 +19,7 @@ import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.presentation.AuthScreen
 import com.example.jsync.presentation.HomeScreen
 import com.example.jsync.presentation.auth.AuthScreenViewModel
+import com.example.jsync.presentation.home.MainViewModel
 import com.example.jsync.ui.theme.JSyncTheme
 import kotlinx.coroutines.runBlocking
 import org.koin.androidx.compose.koinViewModel
@@ -43,8 +44,9 @@ class MainActivity : ComponentActivity(){
                             }
                         }
                         entry<HomeScreen> {
-                            Text(
-                                text = "Home Screen"
+                            val viewModel = koinViewModel<MainViewModel>()
+                            com.example.jsync.presentation.home.HomeScreen(
+                                viewModel = viewModel
                             )
                         }
                     })

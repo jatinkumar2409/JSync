@@ -26,7 +26,9 @@ class AuthRepoImplementation() : AuthRepository {
            }
             Log.d("tag" , "response is $response")
             if(response.status.isSuccess()){
-                return Result.success(response.body<AuthTokens>())
+                val response = response.body<AuthTokens>()
+                Log.d("tag" , response.toString())
+                return Result.success(response)
             }
             else{
                 val error = response.bodyAsText()

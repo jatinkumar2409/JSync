@@ -49,6 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.jsync.core.helpers.ui.AddTaskModal
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.ui.theme.blue20
 import com.example.jsync.ui.theme.blue40
@@ -56,16 +58,23 @@ import com.example.jsync.ui.theme.blue80
 
 //@Preview(showSystemUi = true)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(viewModel : MainViewModel) {
+    val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
+
     var searchTodos by remember{
         mutableStateOf("")
     }
     var expanded by remember {
         mutableStateOf(false)
     }
+    var showBottomSheet by remember {
+        mutableStateOf(false)
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize() , floatingActionButton = {
-            IconButton(onClick =  {} , colors = IconButtonDefaults.iconButtonColors(
+            IconButton(onClick =  {
+                showBottomSheet = true
+            } , colors = IconButtonDefaults.iconButtonColors(
                 containerColor = Color.Transparent , contentColor = Color.White
             ) , modifier = Modifier
                 .clip(shape = CircleShape)
@@ -84,6 +93,12 @@ fun HomeScreen() {
                 .padding(ip)
                 .padding(horizontal = 16.dp)
         ) {
+            if(showBottomSheet){
+                AddTaskModal(onDismiss = { showBottomSheet = false } , onAddTag = {
+                } , onAddTask = { task ->
+                    viewModel.addTask(task)
+                }, networkStatus = networkStatus)
+            }
             Row(
                 modifier = Modifier.fillMaxWidth() , 
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -171,7 +186,7 @@ fun HomeScreen() {
                     }
                 }
             }
-
+             TaskItem()
         }
 
     }
@@ -188,7 +203,6 @@ fun TaskItem(modifier: Modifier = Modifier , task : TaskDTO = TaskDTO(
     hasDone = true,
     tags = "sample",
     userId = "kldskld",
-    isDeleted = false,
     updatedAt = 1L
 )) {
         Row(modifier = Modifier.fillMaxWidth()) {
