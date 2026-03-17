@@ -42,7 +42,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -69,10 +68,12 @@ dependencies {
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.content.negotiation)
     implementation(libs.ktor.serialization)
+    implementation(libs.ktor.client.websockets)
     implementation(libs.kotlinx.serialization)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.security.crypto)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.pref.datastore)
 }

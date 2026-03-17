@@ -95,9 +95,10 @@ fun HomeScreen(viewModel : MainViewModel) {
         ) {
             if(showBottomSheet){
                 AddTaskModal(onDismiss = { showBottomSheet = false } , onAddTag = {
+                       viewModel.addTag(it)
                 } , onAddTask = { task ->
                     viewModel.addTask(task)
-                }, networkStatus = networkStatus)
+                }, networkStatus = networkStatus , tagsList = viewModel.tags)
             }
             Row(
                 modifier = Modifier.fillMaxWidth() , 

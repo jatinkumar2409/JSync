@@ -33,14 +33,14 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
-//@Preview(showSystemUi = true)
+@Preview(showSystemUi = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskModal(
     onDismiss: () -> Unit = {},
     onAddTag: (String) -> Unit = {},
     onAddTask : (TaskDTO) -> Unit = {} ,
-    networkStatus : Boolean ,
+    networkStatus : Boolean = false ,
     tagsList: List<String> = listOf("Meeting", "Home", "General", "Undone")
 ) {
     var taskName by remember { mutableStateOf("") }

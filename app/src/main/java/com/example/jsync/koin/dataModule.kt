@@ -2,8 +2,10 @@ package com.example.jsync.koin
 
 import com.example.jsync.data.auth.impls.AuthRepoImplementation
 import com.example.jsync.data.tasks.impls.TaskRepoImplementation
+import com.example.jsync.data.websockets.impls.WebsocketsImpl
 import com.example.jsync.domain.auth.repos.AuthRepository
 import com.example.jsync.domain.tasks.repos.TaskRepository
+import com.example.jsync.domain.websockets.repo.WebSocketsRepo
 import org.koin.dsl.module
 
 val dataModule = module {
@@ -11,7 +13,10 @@ val dataModule = module {
         AuthRepoImplementation()
     }
     single<TaskRepository>{
-        TaskRepoImplementation(get())
+        TaskRepoImplementation(get() , get())
+    }
+    single<WebSocketsRepo> {
+        WebsocketsImpl()
     }
 }
 

@@ -3,6 +3,7 @@ package com.example.jsync.data.tasks.impls
 import android.util.Log
 import com.example.jsync.core.helpers.GetClient
 import com.example.jsync.core.helpers.manageToken
+import com.example.jsync.core.helpers.prefDatastore
 import com.example.jsync.data.models.ErrorResponse
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.domain.tasks.repos.TaskRepository
@@ -15,11 +16,14 @@ import io.ktor.http.append
 import io.ktor.http.contentType
 import io.ktor.http.headers
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.flow.first
 
-class TaskRepoImplementation(private val manageToken : manageToken) : TaskRepository {
+class TaskRepoImplementation(private val manageToken : manageToken , private val prefDatastore: prefDatastore) : TaskRepository {
     private val client = GetClient.getClient(connectionTimeout = 15_000L , requestTimeout = 12_000L , socketTimeout = 12_000L)
-    val userId = manageToken.getUserId() ?: ""
     override suspend fun addTask(taskDTO: TaskDTO): Result<Boolean> {
+        val userId = prefDatastore.userId.first() ?: ""
+        if (userId.trim().isEmpty()) return Result.failure(Exception("User Id is empty"))
+
         try {
             Log.d("tag" , "add task is running")
             val newTask = taskDTO.copy(userId = userId)
@@ -49,6 +53,8 @@ class TaskRepoImplementation(private val manageToken : manageToken) : TaskReposi
     }
 
     override suspend fun getTasks(): Result<List<TaskDTO>> {
+        val userId = prefDatastore.userId.first() ?: ""
+        if (userId.trim().isEmpty()) return Result.failure(Exception("User Id is empty"))
         try{
             val token = manageToken.getAccessToken() ?: ""
             val response = client.get("/get_tasks?user_id=$userId"){
@@ -66,7 +72,6 @@ class TaskRepoImplementation(private val manageToken : manageToken) : TaskReposi
         }
         catch (e : Exception){
             return Result.failure(e)
-
         }
     }
 }
