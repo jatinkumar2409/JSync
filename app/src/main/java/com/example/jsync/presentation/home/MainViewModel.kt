@@ -1,8 +1,10 @@
 package com.example.jsync.presentation.home
 
 import android.util.Log
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jsync.core.helpers.NetworkObserver
@@ -78,15 +80,21 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
      val selectedTags = mutableStateListOf<String>()
      val error_ = MutableStateFlow("")
      val error = error_.asStateFlow()
+     var selectedDate by mutableStateOf<Long?>(null)
+         private set
    init {
        observeNetwork()
        connectToWebSocket()
        getNewTasks()
    }
+    fun setSelectedDate(date : Long){
+        selectedDate = date
+    }
     fun loadTasks(){
         viewModelScope.launch(Dispatchers.IO) {
+            val toBeDeletedTasks = prefDatastore.getToBeDeleted().first()
             isLoading.value = true
-            mainRepo.loadTasksFromServer {
+            mainRepo.loadTasksFromServer(toBeDeletedTasks) {
                 error_.value = it
             }
             isLoading.value = false

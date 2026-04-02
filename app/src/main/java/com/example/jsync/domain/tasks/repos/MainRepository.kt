@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface MainRepository {
     suspend fun addTask(task : TaskEntity) : TaskEntity
 
-    suspend fun loadTasksFromServer(onError : (String) -> Unit)
+    suspend fun loadTasksFromServer(toBeDeleted : Set<String> , onError : (String) -> Unit)
      fun getDisplayableTasks(userId : String) : Flow<List<TaskEntity>>
     suspend fun updateTask(task : TaskEntity) : TaskEntity
     suspend fun deleteTask(task : TaskEntity)

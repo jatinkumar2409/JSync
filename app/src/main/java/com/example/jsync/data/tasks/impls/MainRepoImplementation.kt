@@ -44,14 +44,15 @@ class MainRepoImplementation(
         return newTask
     }
 
-    override suspend fun loadTasksFromServer(onError : (String) -> Unit) {
+    override suspend fun loadTasksFromServer(toBeDeleted : Set<String> , onError : (String) -> Unit) {
         val tasks = repo.getTasks()
         tasks.onSuccess { it ->
             it.forEach { task ->
                 if (task.isDeleted) {
+                    if(task.id in toBeDeleted) prefDatastore.removeToBeDeleted(task.id)
                    dao.deleteTask(task.toTaskEntity())
                 } else {
-                    dao.upsertTask(task.toTaskEntity())
+                    if(task.id !in toBeDeleted) dao.upsertTask(task.toTaskEntity())
                 }
             }
         }.onFailure {
@@ -92,6 +93,7 @@ class MainRepoImplementation(
                     syncState = SYNC_STATE.TO_BE_DELETED , updatedAt = System.currentTimeMillis()
                 )
             )
+            prefDatastore.saveUserId(task.id)
             enqueueSync()
         }
     }

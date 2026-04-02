@@ -57,11 +57,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.core.helpers.toTaskDto
 import com.example.jsync.core.helpers.toTaskEntity
 import com.example.jsync.core.helpers.toTaskForUi
 import com.example.jsync.core.helpers.ui.AddTaskModal
 import com.example.jsync.core.helpers.ui.BinaryDialog
+import com.example.jsync.core.helpers.ui.JSyncDatePicker
 import com.example.jsync.core.helpers.ui.LoadingScreen
 import com.example.jsync.core.helpers.ui.SwipeToRevealItem
 import com.example.jsync.data.models.TaskDTO
@@ -78,6 +80,7 @@ fun HomeScreen(viewModel : MainViewModel) {
     val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
     val tasksFromRoom by viewModel.tasksFromRoom.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading
+    val selectedDate = viewModel.selectedDate
     LaunchedEffect(Unit) {
         if(networkStatus){
             Log.d("tag" , "load tasks has called")
@@ -107,7 +110,9 @@ fun HomeScreen(viewModel : MainViewModel) {
         mutableStateOf(false)
     }
     val selTags = viewModel.selectedTags
-
+    var showCalenderDialog by remember {
+        mutableStateOf(false)
+    }
     val filteredTasks by remember {
         derivedStateOf {
             if (selTags.isEmpty()) tasks
@@ -121,6 +126,13 @@ fun HomeScreen(viewModel : MainViewModel) {
     }
     val error by viewModel.error.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    if(showCalenderDialog){
+        JSyncDatePicker{
+            if(it == null) return@JSyncDatePicker
+            viewModel.setSelectedDate(it)
+            showCalenderDialog = false
+        }
+    }
     if(showBinaryDialog){
         BinaryDialog(
             onFirstClick = {
@@ -237,9 +249,9 @@ fun HomeScreen(viewModel : MainViewModel) {
                         Column(
                             horizontalAlignment = Alignment.Start
                         ) {
-                            Text(text = "Tuesday", fontSize = 32.sp)
+                            Text(text = timeHelper.formatDay(selectedDate), fontSize = 32.sp)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = "12 Jan 2026", color = Color.DarkGray)
+                            Text(text = timeHelper.formatDate(selectedDate), color = Color.DarkGray)
                         }
                         IconButton(onClick = {}) {
                             Icon(

@@ -2,27 +2,35 @@ package com.example.jsync.core.helpers
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 object timeHelper {
     @RequiresApi(Build.VERSION_CODES.O)
-    fun getDateOfToday() : String{
-        val today = LocalDate.now()
-        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
-        val formattedDate = today.format(formatter)
-        return formattedDate
+    fun getCurrentTime(): String {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        return Instant.ofEpochMilli(System.currentTimeMillis())
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
+            .format(formatter)
     }
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getDay(inputDate : String) : String{
-        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy" , Locale.ENGLISH)
-        val date = LocalDate.parse(inputDate, formatter)
+    fun formatDate(millis: Long?): String {
+        val time = millis ?: System.currentTimeMillis()
+        val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        formatter.timeZone = TimeZone.getDefault()
+        return formatter.format(Date(time))
+    }
 
-        val dayName = date.dayOfWeek
-            .getDisplayName(TextStyle.FULL, Locale.getDefault())
-      return dayName
+    fun formatDay(millis: Long?): String {
+        val time = millis ?: System.currentTimeMillis()
+        val formatter = SimpleDateFormat("EEEE", Locale.getDefault())
+        formatter.timeZone = TimeZone.getDefault()
+        return formatter.format(Date(time))
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

@@ -8,6 +8,7 @@ import com.example.jsync.data.models.ErrorResponse
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.domain.tasks.repos.TaskRepository
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -21,7 +22,7 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.first
 
 class TaskRepoImplementation(private val manageToken : manageToken) : TaskRepository {
-    private val client = GetClient.getClient(connectionTimeout = 15_000L , requestTimeout = 12_000L , socketTimeout = 12_000L)
+    private val client = GetClient.getClient(connectionTimeout = 30_000L , requestTimeout = 30_000L , socketTimeout = 60_000L)
     override suspend fun addTask(taskDTO: TaskDTO): Result<Boolean> {
         val token = manageToken.getAccessToken() ?: ""
         if (token.trim().isEmpty()) return Result.failure(Exception("User Id is empty"))
@@ -94,7 +95,7 @@ class TaskRepoImplementation(private val manageToken : manageToken) : TaskReposi
     override suspend fun deleteTask(taskId: String): Result<Boolean> {
        try {
            val token = manageToken.getAccessToken() ?: ""
-           val response = client.put("/update_task?task_id=$taskId"){
+           val response = client.delete("/delete_task?task_id=$taskId"){
                header("Authorization" , "Bearer $token")
            }
            if(response.status.isSuccess()){
@@ -106,6 +107,7 @@ class TaskRepoImplementation(private val manageToken : manageToken) : TaskReposi
            }
        }
        catch (e : Exception){
+           Log.d("worker" , e.message.toString())
            return Result.failure(e)
        }
     }
