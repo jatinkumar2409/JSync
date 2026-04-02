@@ -24,4 +24,14 @@ object timeHelper {
             .getDisplayName(TextStyle.FULL, Locale.getDefault())
       return dayName
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun formatTimeStampToTime(timestamp: Long): String {
+        val localTime = java.time.Instant.ofEpochMilli(timestamp)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime()
+
+        return java.time.format.DateTimeFormatter.ofPattern("HH : mm")
+            .format(localTime)
+    }
 }

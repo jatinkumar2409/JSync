@@ -1,57 +1,185 @@
 package com.example.jsync.data.websockets.impls
 
 import android.util.Log
+import com.example.jsync.core.helpers.NetworkObserver
+import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.data.models.TaskDTO
+import com.example.jsync.data.models.WebsocketMessage
 import com.example.jsync.domain.websockets.repo.WebSocketsRepo
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.client.request.header
+import io.ktor.http.URLProtocol
+import io.ktor.http.encodedPath
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
-import io.ktor.websocket.readBytes
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import okhttp3.Dispatcher
 
-class WebsocketsImpl() : WebSocketsRepo {
-    private val client = HttpClient {
-        install(WebSockets)
-    }
+class WebsocketsImpl(private val manageToken: manageToken ,
+    private val networkObserver: NetworkObserver) : WebSocketsRepo {
+   private val client = HttpClient(io.ktor.client.engine.okhttp.OkHttp){
+    install(WebSockets)
+   }
+
     private var session : DefaultClientWebSocketSession? = null
-    private val _messages = MutableSharedFlow<TaskDTO>()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val webscoketState_ = MutableStateFlow(WebsocketState.DISCONNECTED)
+    override val websocketState = webscoketState_.asStateFlow()
+    private val _messages = MutableSharedFlow<WebsocketMessage>()
     override val messages = _messages
-    override suspend fun connect(userId: String) {
-        session = client.webSocketSession(
-            host = "192.168.254.241",
-            port = 8000,
-            path = "/ws"
-        )
-        session?.let{
-            manageSocket()
+    private var lastSeenAt = 0L
+    private var reconnectJob : Job? = null
+
+    private var connectionJob : Job? = null
+
+    override suspend fun connect(onError: (String) -> Unit) {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+                networkObserver.observeNetwork().collectLatest { networkStatus ->
+                    if(networkStatus){
+                        connectionJob?.cancel()
+                        connectionJob =  launch {
+                            manageConnection(onError)
+                        }
+                    }
+                    else{
+                        connectionJob?.cancel()
+                        session?.close()
+                        markDisconnected()
+                    }
+                }
         }
     }
-    private fun manageSocket(){
-        CoroutineScope(Dispatchers.IO).launch {
+    private suspend fun manageConnection(onError : (String) -> Unit){
+        while (currentCoroutineContext().isActive){
+            try {
+                webscoketState_.value = WebsocketState.CONNECTING
+                val token = manageToken.getAccessToken()
+                if(token == null){
+                    delay(2000)
+                    continue
+                }
+                session?.close()
+                session = client.webSocketSession{
+                    url {
+                        protocol = URLProtocol.WS
+                        host = "192.168.40.241"
+                        port = 8000
+                        encodedPath = "/ws/tasks"
+                        parameters.append("token" , token)
+                    }
+                }
+                webscoketState_.value = WebsocketState.CONNECTED
+                lastSeenAt = now()
+                coroutineScope {
+                    val reader = launch { readLoop(onError)}
+                    val heartBeatMonitor = launch { heartBeatMonitorLoop() }
+                }
+
+            }
+            catch (e : Exception){
+                markDisconnected()
+                delay(3000)
+            }
+        }
+    }
+    private suspend fun readLoop(onError: (String) -> Unit){
+        try {
             for (frame in session!!.incoming){
                 when(frame){
-                  is  Frame.Text -> {
-                      Log.d("tag" , frame.readText())
-                  }
-
+                    is  Frame.Text -> {
+                        lastSeenAt = now()
+                        val text = frame.readText()
+                        val message = Json.decodeFromString<WebsocketMessage>(text)
+                        if(message.type == "pong") continue
+                        Log.d("websocket" , "Receiving $message")
+                        _messages.emit(
+                            message
+                        )
+                        if(message.type == "error"){
+                            onError(
+                                message.error!!
+                            )
+                        }
+                    }
                     else -> {}
                 }
             }
         }
+        catch (e : Exception){
+            throw e
+        }
     }
 
-    override suspend fun sendTask(taskDTO: TaskDTO) {
-        session?.send(Frame.Text(taskDTO.toString()))
+    private suspend fun heartBeatMonitorLoop(){
+        while (currentCoroutineContext().isActive){
+            delay(25_000)
+            val diff = now() - lastSeenAt
+            when{
+                diff < 30_000 -> {
+                    webscoketState_.value = WebsocketState.CONNECTED
+                }
+                diff in 30_000..60_000 -> {
+                    webscoketState_.value = WebsocketState.STALE
+                }
+                else ->{
+                    throw Exception("Disconnected")
+                }
+            }
+            try {
+               session?.send(Frame.Text(Json.encodeToString(WebsocketMessage(type = "ping" , task = null))))
+            }
+            catch (e : Exception){
+                throw e
+            }
+        }
+    }
+
+    override suspend fun sendTask(message : WebsocketMessage) {
+        Log.d("websocket" , "Sending message $message")
+        val json = Json.encodeToString(message)
+        try {
+            if(session == null) return
+            if(websocketState.value == WebsocketState.DISCONNECTED) return
+            if(websocketState.value == WebsocketState.CONNECTING) delay(2000);
+                session?.send(Frame.Text(json))
+
+        }catch (e : Exception){
+            markDisconnected()
+            throw e
+        }
     }
 
     override suspend fun disconnect() {
+        reconnectJob?.cancel()
         session?.close()
+        markDisconnected()
     }
+    private fun markDisconnected(){
+        session = null
+        webscoketState_.value = WebsocketState.DISCONNECTED
+    }
+    private fun now() = System.currentTimeMillis()
+}
+
+enum class WebsocketState{
+    CONNECTING , CONNECTED , DISCONNECTED , STALE
 }

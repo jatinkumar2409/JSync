@@ -6,4 +6,9 @@ interface TaskRepository {
     suspend fun addTask(taskDTO: TaskDTO) : Result<Boolean>
     suspend fun getTasks() : Result<List<TaskDTO>>
 
+    suspend fun updateTask(task : TaskDTO) : Result<Boolean>
+
+    suspend fun  deleteTask(taskId : String) : Result<Boolean>
+
+
 }

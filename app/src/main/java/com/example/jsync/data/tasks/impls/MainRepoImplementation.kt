@@ -1,0 +1,141 @@
+package com.example.jsync.data.tasks.impls
+
+import android.content.Context
+import android.util.Log
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.jsync.core.helpers.SyncWorkerForTasks
+import com.example.jsync.core.helpers.prefDatastore
+import com.example.jsync.core.helpers.toTaskEntity
+import com.example.jsync.data.room.Daos.TaskDao
+import com.example.jsync.data.room.entities.SYNC_STATE
+import com.example.jsync.data.room.entities.TaskEntity
+import com.example.jsync.domain.tasks.repos.MainRepository
+import com.example.jsync.domain.tasks.repos.TaskRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
+
+class MainRepoImplementation(
+    private val dao : TaskDao ,
+    private val context : Context ,
+    private val repo : TaskRepository ,
+    private val prefDatastore : prefDatastore
+) : MainRepository {
+    override suspend fun addTask(task: TaskEntity): TaskEntity {
+        val userId = prefDatastore.userId.first() ?: ""
+        val newTask =  task.copy(
+            userId = userId ,
+            syncState = SYNC_STATE.TO_BE_CREATED ,
+            updatedAt = System.currentTimeMillis()
+        )
+        dao.upsertTask(
+            newTask
+        )
+//        enqueueSync()
+        return newTask
+    }
+
+    override suspend fun loadTasksFromServer(onError : (String) -> Unit) {
+        val tasks = repo.getTasks()
+        tasks.onSuccess { it ->
+            it.forEach { task ->
+                if (task.isDeleted) {
+                   dao.deleteTask(task.toTaskEntity())
+                } else {
+                    dao.upsertTask(task.toTaskEntity())
+                }
+            }
+        }.onFailure {
+            Log.d("tag" , "Error while loading tasks" +  it.message.toString())
+            onError(it.message.toString())
+        }
+
+    }
+
+    override fun getDisplayableTasks(userId : String): Flow<List<TaskEntity>> {
+        return dao.getDisplayableTasks(userId)
+    }
+
+    override suspend fun updateTask(task: TaskEntity): TaskEntity {
+        val userId = prefDatastore.userId.first() ?: ""
+    val newState = if(task.syncState == SYNC_STATE.TO_BE_CREATED) SYNC_STATE.TO_BE_CREATED else SYNC_STATE.TO_BE_UPDATED
+    val newTask = task.copy(
+        userId = userId,
+        syncState = newState ,
+        updatedAt = System.currentTimeMillis()
+    )
+        dao.upsertTask(
+           newTask
+        )
+//        enqueueSync()
+        return newTask
+    }
+
+    override suspend fun deleteTask(task: TaskEntity) {
+        val userId = prefDatastore.userId.first() ?: ""
+        if(task.syncState == SYNC_STATE.TO_BE_CREATED){
+            dao.deleteTask(task)
+        }
+        else{
+            dao.upsertTask(
+                task.copy(
+                    userId = userId,
+                    syncState = SYNC_STATE.TO_BE_DELETED , updatedAt = System.currentTimeMillis()
+                )
+            )
+            enqueueSync()
+        }
+    }
+
+    override suspend fun retryTask(task: TaskEntity) : Boolean {
+        val locked = dao.updateStateIfUnchanged(
+            id = task.id, userId = task.userId , fromState = task.syncState
+        )
+        return locked == 1
+    }
+
+    override suspend fun upsertSyncedTask(task: TaskEntity) {
+        try{
+            dao.upsertTask(
+                task = task.copy(
+                    syncState = SYNC_STATE.SYNCED
+                )
+            )
+        }
+        catch (e : Exception){
+         Log.d("tag2" , "exception in upserting is ${e.message}")
+        }
+    }
+
+    override suspend fun deleteSyncedTask(task: TaskEntity) {
+        dao.deleteTask(task)
+    }
+
+    private fun enqueueSync(){
+        val request = OneTimeWorkRequestBuilder<SyncWorkerForTasks>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(
+                        NetworkType.CONNECTED
+                    ).build()
+            )
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL , 10 , TimeUnit.SECONDS
+            )
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "sync_tasks" , ExistingWorkPolicy.KEEP , request
+        )
+
+    }
+
+}

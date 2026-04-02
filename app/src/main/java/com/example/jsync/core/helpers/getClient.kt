@@ -20,7 +20,7 @@ object GetClient {
         install(DefaultRequest){
             url {
               protocol = URLProtocol.HTTP
-              host = "192.168.254.241"
+              host = "192.168.40.241"
               port = 8000
             }
         }

@@ -6,6 +6,7 @@ import com.example.jsync.koin.domainModule
 import com.example.jsync.koin.helperModule
 import com.example.jsync.koin.presentationModule
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.startKoin
 
 
@@ -14,6 +15,7 @@ class JSyncApp : Application() {
         super.onCreate()
         startKoin(){
             androidContext(this@JSyncApp)
+            workManagerFactory()
             modules(dataModule , helperModule , domainModule , presentationModule)
         }
     }

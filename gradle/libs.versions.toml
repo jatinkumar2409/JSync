@@ -17,6 +17,7 @@ crypto = "1.1.0-alpha06"
 room_version = "2.8.4"
 ksp = "2.3.4"
 pref = "1.2.1"
+work_version = "2.11.2"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -38,10 +39,12 @@ koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }
 koin-compose = { module = "io.insert-koin:koin-androidx-compose" }
+koin-androidx-workmanager = { module = "io.insert-koin:koin-androidx-workmanager"}
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor"}
 ktor-client-android = {module = "io.ktor:ktor-client-android" , version.ref = "ktor"}
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation" , version.ref = "ktor"}
 ktor-client-websockets = { module = "io.ktor:ktor-client-websockets" , version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp" , version.ref = "ktor"}
 pref-datastore = {module = "androidx.datastore:datastore-preferences" , version.ref = "pref"}
 ktor-serialization = {module = "io.ktor:ktor-serialization-kotlinx-json" , version.ref = "ktor"}
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
@@ -51,6 +54,7 @@ androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifec
 security-crypto = {module = "androidx.security:security-crypto" , version.ref = "crypto"}
 androidx-room-runtime = {module = "androidx.room:room-runtime" , version.ref = "room_version"}
 androidx-room-compiler = {module = "androidx.room:room-compiler" , version.ref = "room_version"}
+androidx-work-runtime = {module = "androidx.work:work-runtime-ktx" , version.ref = "work_version" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

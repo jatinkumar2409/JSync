@@ -9,6 +9,6 @@ val presentationModule = module {
         AuthScreenViewModel(get() , get() , get())
     }
     single{
-        MainViewModel(get() , get() , get())
+        MainViewModel(get() , get() , get() , get() , get() , get())
     }
     }

@@ -33,20 +33,22 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
-@Preview(showSystemUi = true)
+//@Preview(showSystemUi = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskModal(
+    task_ : TaskDTO = TaskDTO(id = "" , taskName = "" , userId = "" , dueAt = null , type = 1 , priority = 1 , hasDone = false , tags = ""),
     onDismiss: () -> Unit = {},
     onAddTag: (String) -> Unit = {},
-    onAddTask : (TaskDTO) -> Unit = {} ,
-    networkStatus : Boolean = false ,
+    onAddTask : (TaskDTO) -> Unit = {},
     tagsList: List<String> = listOf("Meeting", "Home", "General", "Undone")
 ) {
-    var taskName by remember { mutableStateOf("") }
+
+    var taskName by remember { mutableStateOf(task_.taskName) }
+
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val tags = remember { mutableStateListOf<String>() }
+    val tags = remember { task_.tags.split(",").toMutableStateList() }
     val colors = remember {
         listOf(
             blue40,
@@ -58,9 +60,9 @@ fun AddTaskModal(
         )
     }
 
-    var prioritySelection by remember { mutableIntStateOf(1) }
-    var taskTypeSelection by remember { mutableIntStateOf(1) }
-    var dueTime by remember { mutableStateOf<Long?>(null) }
+    var prioritySelection by remember { mutableIntStateOf(task_.priority) }
+    var taskTypeSelection by remember { mutableIntStateOf(task_.type) }
+    var dueTime by remember { mutableStateOf<Long?>(task_.dueAt) }
 
     val priorities = listOf("Low", "Medium", "High")
     val taskTypes = listOf("Temporary", "Default", "Recurring")
@@ -315,24 +317,18 @@ fun AddTaskModal(
 
                 Button(
                     onClick = {
-                        if(!networkStatus){
-                            Toast.makeText(context, "No Internet Connection", Toast.LENGTH_SHORT)
-                                .show()
-                            return@Button
-                        }
                         if(taskName.trim().isEmpty()){
                             Toast.makeText(context, "Task Name is empty", Toast.LENGTH_SHORT).show()
                             return@Button
                         } 
                         val task = TaskDTO(
-                            id = UUID.randomUUID().toString() ,
+                            id = if(task_.id.trim().isEmpty())  UUID.randomUUID().toString() else task_.id ,
                             taskName = taskName,
                             userId = "", dueAt = dueTime ,
                             type = taskTypeSelection,
                             priority = prioritySelection,
-                            hasDone = false,
-                            tags = tags.joinToString(","),
-                            updatedAt = 0L
+                            hasDone = task_.hasDone,
+                            tags = tags.joinToString(",")
                         )
                       onAddTask(task)
                     },
@@ -346,7 +342,7 @@ fun AddTaskModal(
                     )
                 ) {
                     Text(
-                        text = "Add Task",
+                        text = if(task_.taskName.trim().isEmpty()) "Add Task" else "Update Task",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )

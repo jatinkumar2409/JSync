@@ -9,13 +9,20 @@ data class TaskEntity(
     val id : String ,
     val taskName : String ,
     val userId : String ,
-    val dueTo : Long? ,
+    val dueAt : Long? ,
     val type : Int ,
     val priority : Int ,
     val hasDone : Boolean ,
     val tags : String ,
-    val isDeleted : Boolean ,
-    val updatedAt : Long
+    val updatedAt : Long ,
+    val syncState : SYNC_STATE = SYNC_STATE.UNSYNCED
 )
+
+enum class SYNC_STATE{
+    TO_BE_CREATED ,
+    TO_BE_UPDATED ,
+    TO_BE_DELETED ,
+    SYNCED , UNSYNCED , SYNCING , FAILED , FAILED_DELETE
+}
 
 
