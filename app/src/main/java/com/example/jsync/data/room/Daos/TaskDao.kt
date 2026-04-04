@@ -49,4 +49,16 @@ interface TaskDao {
         fromState: SYNC_STATE,
         syncState: SYNC_STATE = SYNC_STATE.SYNCING
     ) : Int
+
+    @Query("""
+        SELECT * FROM tasks WHERE userId = :userId AND syncState != 'TO_BE_DELETED' 
+ AND belongsToDate BETWEEN :startOfDay AND :endOfDay
+ORDER BY updatedAt DESC
+    """)
+    fun getTasksByDate(
+        userId: String,
+        startOfDay: Long,
+        endOfDay: Long
+    ): Flow<List<TaskEntity>>
+
 }

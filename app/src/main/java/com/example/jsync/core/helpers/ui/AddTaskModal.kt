@@ -19,10 +19,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.ui.theme.blue20
 import com.example.jsync.ui.theme.blue40
@@ -37,11 +37,21 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskModal(
-    task_ : TaskDTO = TaskDTO(id = "" , taskName = "" , userId = "" , dueAt = null , type = 1 , priority = 1 , hasDone = false , tags = ""),
+    task_: TaskDTO = TaskDTO(
+        id = "",
+        taskName = "",
+        userId = "",
+        dueAt = null,
+        type = 1,
+        priority = 1,
+        hasDone = false,
+        tags = ""
+    ),
     onDismiss: () -> Unit = {},
     onAddTag: (String) -> Unit = {},
-    onAddTask : (TaskDTO) -> Unit = {},
-    tagsList: List<String> = listOf("Meeting", "Home", "General", "Undone")
+    onAddTask: (TaskDTO) -> Unit = {},
+    tagsList: List<String> = listOf("Meeting", "Home", "General", "Undone"),
+    date: Long
 ) {
 
     var taskName by remember { mutableStateOf(task_.taskName) }
@@ -320,7 +330,7 @@ fun AddTaskModal(
                         if(taskName.trim().isEmpty()){
                             Toast.makeText(context, "Task Name is empty", Toast.LENGTH_SHORT).show()
                             return@Button
-                        } 
+                        }
                         val task = TaskDTO(
                             id = if(task_.id.trim().isEmpty())  UUID.randomUUID().toString() else task_.id ,
                             taskName = taskName,
@@ -328,7 +338,8 @@ fun AddTaskModal(
                             type = taskTypeSelection,
                             priority = prioritySelection,
                             hasDone = task_.hasDone,
-                            tags = tags.joinToString(",")
+                            tags = tags.joinToString(",") ,
+                            belongsToDate = if(System.currentTimeMillis() >= timeHelper.getEndOfDay(date)) System.currentTimeMillis() else date
                         )
                       onAddTask(task)
                     },

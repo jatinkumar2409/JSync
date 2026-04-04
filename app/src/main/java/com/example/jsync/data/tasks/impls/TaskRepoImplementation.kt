@@ -59,10 +59,12 @@ class TaskRepoImplementation(private val manageToken : manageToken) : TaskReposi
                 header("Authorization", "Bearer $token")
             }
             if (response.status.isSuccess()){
+                Log.d("tag1",  "Status is success")
                 return Result.success(response.body())
             }
             else{
                 val error = response.body<ErrorResponse>()
+                Log.d("tag1",  error.toString())
                 return Result.failure(Exception(error.detail))
             }
         }

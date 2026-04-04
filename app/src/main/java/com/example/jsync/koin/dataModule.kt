@@ -28,7 +28,8 @@ val dataModule = module {
     single{
         Room.databaseBuilder(
             get() , JSyncDatabase::class.java , "jsync_db"
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
     single {
         get<JSyncDatabase>().taskDao()

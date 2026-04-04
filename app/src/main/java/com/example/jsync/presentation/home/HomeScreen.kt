@@ -76,11 +76,14 @@ import com.example.jsync.ui.theme.blue80
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel : MainViewModel) {
-    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
+    val tasksOfDate by viewModel.tasksOfDate.collectAsStateWithLifecycle()
+    val tasks by remember(tasksOfDate) {
+        derivedStateOf { tasksOfDate.map { it.toTaskForUi() } }
+    }
     val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
     val tasksFromRoom by viewModel.tasksFromRoom.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading
-    val selectedDate = viewModel.selectedDate
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         if(networkStatus){
             Log.d("tag" , "load tasks has called")
@@ -127,9 +130,12 @@ fun HomeScreen(viewModel : MainViewModel) {
     val error by viewModel.error.collectAsStateWithLifecycle()
     val context = LocalContext.current
     if(showCalenderDialog){
-        JSyncDatePicker{
+        Log.d("tag123" , "Show calender dialog is true")
+        JSyncDatePicker(onDismiss = {
+            showCalenderDialog = false
+        }){
             if(it == null) return@JSyncDatePicker
-            viewModel.setSelectedDate(it)
+            viewModel.updateSelectedDate(it)
             showCalenderDialog = false
         }
     }
@@ -209,16 +215,21 @@ fun HomeScreen(viewModel : MainViewModel) {
                 } else {
                     if (showBottomSheet) {
                         if (currentTask == null) {
-                            AddTaskModal(onDismiss = { showBottomSheet = false }, onAddTag = {
-                                viewModel.addTag(it)
-                            }, onAddTask = { task ->
-                                showBottomSheet = false
+                            AddTaskModal(
+                                onDismiss = { showBottomSheet = false },
+                                onAddTag = {
+                                    viewModel.addTag(it)
+                                },
+                                onAddTask = { task ->
+                                    showBottomSheet = false
 
-                                viewModel.addTask(task){
-                                    Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                            }, tagsList = viewModel.tags)
+                                    viewModel.addTask(task){
+                                        Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                },
+                                tagsList = viewModel.tags, date = selectedDate
+                            )
                         } else {
                             val task__ = currentTask!!
                             AddTaskModal(
@@ -237,7 +248,7 @@ fun HomeScreen(viewModel : MainViewModel) {
                                         Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT)
                                             .show()
                                     }
-                                }, tagsList = viewModel.tags
+                                }, tagsList = viewModel.tags , date = selectedDate
                             )
 
                         }
@@ -253,7 +264,9 @@ fun HomeScreen(viewModel : MainViewModel) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = timeHelper.formatDate(selectedDate), color = Color.DarkGray)
                         }
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = {
+                            showCalenderDialog = true
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.CalendarToday,
                                 contentDescription = "Calender"

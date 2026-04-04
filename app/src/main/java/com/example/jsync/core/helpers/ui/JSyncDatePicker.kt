@@ -8,16 +8,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.jsync.ui.theme.blue20
 import com.example.jsync.ui.theme.blue40
 import com.example.jsync.ui.theme.blue80
 import java.util.Calendar
-@Preview(showBackground = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JSyncDatePicker(
-    onDateSelected: (Long?) -> Unit = {}
+fun JSyncDatePicker( onDismiss : () -> Unit ,
+    onDateSelected: (Long?) -> Unit
 ) {
     val currentTime = System.currentTimeMillis()
 
@@ -29,7 +27,7 @@ fun JSyncDatePicker(
     val datePickerState = rememberDatePickerState(
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                return utcTimeMillis in currentTime..oneYearLater
+                return utcTimeMillis <= oneYearLater
             }
         }
     )
@@ -64,7 +62,7 @@ fun JSyncDatePicker(
             // Navigation icons (arrow)
             navigationContentColor = blue80
         ),
-        onDismissRequest = {},
+        onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 onDateSelected(datePickerState.selectedDateMillis)

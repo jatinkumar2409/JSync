@@ -13,5 +13,7 @@ data class TaskDTO(
     val hasDone : Boolean ,
     val tags : String ,
     val updatedAt : Long = 0L ,
+    val belongsToDate : Long = 0L,
+    val expiryTime : Long? = null ,
     val isDeleted : Boolean = false
 )

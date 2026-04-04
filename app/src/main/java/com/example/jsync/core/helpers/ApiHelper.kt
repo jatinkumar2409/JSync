@@ -19,6 +19,7 @@ object ApiHelper {
          catch (e : ClientRequestException){
             if(e.response.status.value == 401){
               val token =   authenticator.rotateAccessToken();
+
                 if(token.trim().isNotEmpty()) {
                     return block()
                 }

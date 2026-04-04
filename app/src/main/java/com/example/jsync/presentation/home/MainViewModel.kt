@@ -1,6 +1,8 @@
 package com.example.jsync.presentation.home
 
 import android.util.Log
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,9 +31,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
@@ -46,6 +50,9 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     val networkStatus = _networkStatus.asStateFlow()
     val websocketState = webSocketsRepo.websocketState as StateFlow
     val isLoading = mutableStateOf(false)
+    private val selectedDate_ = MutableStateFlow(System.currentTimeMillis())
+    val selectedDate = selectedDate_.asStateFlow()
+
     val localTasks = MutableStateFlow<Map<String , TaskForUi>>(emptyMap())
     val tasksFromRoom = prefDatastore.userId.filter { !(it.isNullOrEmpty() || it.trim().isEmpty()) }
         .flatMapLatest { userId ->
@@ -80,15 +87,30 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
      val selectedTags = mutableStateListOf<String>()
      val error_ = MutableStateFlow("")
      val error = error_.asStateFlow()
-     var selectedDate by mutableStateOf<Long?>(null)
-         private set
+
+
+    val tasksOfDate = combine(
+        selectedDate , prefDatastore.userId.filterNotNull()
+    ){ date , userId ->
+        date to userId
+    }.flatMapLatest { (date , userId) ->
+        mainRepo.getTasksOfDate(belongsToDate = date , userId = userId)
+    }.stateIn(
+        viewModelScope , SharingStarted.WhileSubscribed(5000) , emptyList()
+    )
+
+    val tasksForUi by derivedStateOf {
+        tasksOfDate.map { tasks -> tasks.map {
+            it.toTaskForUi()
+        } }
+    }
    init {
        observeNetwork()
        connectToWebSocket()
        getNewTasks()
    }
-    fun setSelectedDate(date : Long){
-        selectedDate = date
+    fun updateSelectedDate(date : Long){
+        selectedDate_.value = date
     }
     fun loadTasks(){
         viewModelScope.launch(Dispatchers.IO) {
@@ -134,7 +156,9 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     fun addTask(taskDTO: TaskDTO , onError : (String) -> Unit){
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                mainRepo.addTask(taskDTO.toTaskEntity(SYNC_STATE.TO_BE_CREATED))
+                mainRepo.addTask(taskDTO.toTaskEntity(SYNC_STATE.TO_BE_CREATED).copy(
+                    belongsToDate = selectedDate.value
+                ))
                 webSocketsRepo.sendTask(
                     WebsocketMessage(
                         type = "task", task = taskDTO

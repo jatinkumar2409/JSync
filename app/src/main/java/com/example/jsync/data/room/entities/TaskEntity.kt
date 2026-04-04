@@ -15,6 +15,8 @@ data class TaskEntity(
     val hasDone : Boolean ,
     val tags : String ,
     val updatedAt : Long ,
+    val belongsToDate : Long = System.currentTimeMillis() ,
+    val expiryTime : Long? = null ,
     val syncState : SYNC_STATE = SYNC_STATE.UNSYNCED
 )
 

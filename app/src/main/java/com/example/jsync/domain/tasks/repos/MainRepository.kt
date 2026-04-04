@@ -15,4 +15,6 @@ interface MainRepository {
     suspend fun upsertSyncedTask(task : TaskEntity)
 
     suspend fun deleteSyncedTask(task : TaskEntity)
+
+     fun getTasksOfDate(belongsToDate : Long , userId: String) : Flow<List<TaskEntity>>
 }

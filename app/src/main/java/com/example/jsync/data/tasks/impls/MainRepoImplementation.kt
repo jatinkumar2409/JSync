@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.jsync.core.helpers.SyncWorkerForTasks
 import com.example.jsync.core.helpers.prefDatastore
+import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.core.helpers.toTaskEntity
 import com.example.jsync.data.room.Daos.TaskDao
 import com.example.jsync.data.room.entities.SYNC_STATE
@@ -45,14 +46,20 @@ class MainRepoImplementation(
     }
 
     override suspend fun loadTasksFromServer(toBeDeleted : Set<String> , onError : (String) -> Unit) {
+        Log.d("tag1" , "load tasks from server is calling")
         val tasks = repo.getTasks()
         tasks.onSuccess { it ->
+            Log.d("tag1" , "task is ${it.joinToString( " , ")}")
             it.forEach { task ->
                 if (task.isDeleted) {
+                    Log.d("tag1" , "deleting task with ${task.taskName}")
                     if(task.id in toBeDeleted) prefDatastore.removeToBeDeleted(task.id)
                    dao.deleteTask(task.toTaskEntity())
                 } else {
-                    if(task.id !in toBeDeleted) dao.upsertTask(task.toTaskEntity())
+                    if(task.id !in toBeDeleted){
+                        dao.upsertTask(task.toTaskEntity())
+                        Log.d("tag1" , "upserting the task")
+                    }
                 }
             }
         }.onFailure {
@@ -120,6 +127,12 @@ class MainRepoImplementation(
 
     override suspend fun deleteSyncedTask(task: TaskEntity) {
         dao.deleteTask(task)
+    }
+
+    override fun getTasksOfDate(belongsToDate: Long, userId: String) : Flow<List<TaskEntity>> {
+       return dao.getTasksByDate(
+           userId = userId , startOfDay = timeHelper.getStartOfDay(belongsToDate) , endOfDay = timeHelper.getEndOfDay(belongsToDate)
+       )
     }
 
     private fun enqueueSync(){

@@ -14,6 +14,8 @@ fun TaskEntity.toTaskDto() = TaskDTO(
     priority = this.priority,
     hasDone = this.hasDone,
     tags = this.tags,
+    belongsToDate = this.belongsToDate,
+    expiryTime = this.expiryTime,
     updatedAt = this.updatedAt
 )
 
@@ -27,6 +29,8 @@ fun TaskDTO.toTaskEntity(syncState : SYNC_STATE = SYNC_STATE.SYNCED) = TaskEntit
     hasDone = this.hasDone,
     tags = this.tags,
     updatedAt = this.updatedAt,
+    belongsToDate = belongsToDate,
+    expiryTime = this.expiryTime,
     syncState = syncState
 )
 
