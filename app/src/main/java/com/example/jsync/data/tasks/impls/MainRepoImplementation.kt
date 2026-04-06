@@ -8,14 +8,18 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.jsync.core.helpers.SyncSchedular
 import com.example.jsync.core.helpers.SyncWorkerForTasks
 import com.example.jsync.core.helpers.prefDatastore
 import com.example.jsync.core.helpers.timeHelper
+import com.example.jsync.core.helpers.toTaskCompletion
 import com.example.jsync.core.helpers.toTaskEntity
+import com.example.jsync.data.room.Daos.TaskCompletionDao
 import com.example.jsync.data.room.Daos.TaskDao
 import com.example.jsync.data.room.entities.SYNC_STATE
 import com.example.jsync.data.room.entities.TaskEntity
 import com.example.jsync.domain.tasks.repos.MainRepository
+import com.example.jsync.domain.tasks.repos.TaskCompletionRepo
 import com.example.jsync.domain.tasks.repos.TaskRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +31,12 @@ import java.util.concurrent.TimeUnit
 
 class MainRepoImplementation(
     private val dao : TaskDao ,
+    private val taskCompletionDao: TaskCompletionDao ,
     private val context : Context ,
     private val repo : TaskRepository ,
-    private val prefDatastore : prefDatastore
+    private val taskCompletionRepo : TaskCompletionRepo ,
+    private val prefDatastore : prefDatastore ,
+    private val syncSchedular: SyncSchedular
 ) : MainRepository {
     override suspend fun addTask(task: TaskEntity): TaskEntity {
         val userId = prefDatastore.userId.first() ?: ""
@@ -101,7 +108,7 @@ class MainRepoImplementation(
                 )
             )
             prefDatastore.saveUserId(task.id)
-            enqueueSync()
+            syncSchedular.enqueueSync()
         }
     }
 
@@ -135,22 +142,11 @@ class MainRepoImplementation(
        )
     }
 
-    private fun enqueueSync(){
-        val request = OneTimeWorkRequestBuilder<SyncWorkerForTasks>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(
-                        NetworkType.CONNECTED
-                    ).build()
-            )
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL , 10 , TimeUnit.SECONDS
-            )
-            .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "sync_tasks" , ExistingWorkPolicy.KEEP , request
-        )
-
+    override suspend fun getTaskCompletionsByDateFromRoom(
+        date: Long,
+        onError: (String) -> Unit
+    ) {
     }
+
 
 }

@@ -1,6 +1,7 @@
 package com.example.jsync.koin
 
 import com.example.jsync.core.helpers.NetworkObserver
+import com.example.jsync.core.helpers.SyncSchedular
 import com.example.jsync.core.helpers.SyncWorkerForTasks
 import com.example.jsync.core.helpers.TokenAuthenticator
 import com.example.jsync.core.helpers.manageToken
@@ -28,5 +29,8 @@ val helperModule = module {
     }
     single {
         TokenAuthenticator(get())
+    }
+    single{
+        SyncSchedular(get())
     }
 }

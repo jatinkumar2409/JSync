@@ -17,4 +17,6 @@ interface MainRepository {
     suspend fun deleteSyncedTask(task : TaskEntity)
 
      fun getTasksOfDate(belongsToDate : Long , userId: String) : Flow<List<TaskEntity>>
+
+    suspend fun getTaskCompletionsByDateFromRoom(date : Long , onError: (String) -> Unit)
 }

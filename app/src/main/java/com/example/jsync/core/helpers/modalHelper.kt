@@ -1,8 +1,10 @@
 package com.example.jsync.core.helpers
 
+import com.example.jsync.data.models.TaskCompletionDTO
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.data.models.TaskForUi
 import com.example.jsync.data.room.entities.SYNC_STATE
+import com.example.jsync.data.room.entities.TaskCompletion
 import com.example.jsync.data.room.entities.TaskEntity
 
 fun TaskEntity.toTaskDto() = TaskDTO(
@@ -53,4 +55,10 @@ fun TaskEntity.toTaskForUi() = TaskForUi(
     hasDone = this.hasDone,
     tags = this.tags,
     syncState = this.syncState
+)
+fun TaskCompletion.toTaskCompletionDto() = TaskCompletionDTO(
+    id = this.id , taskId = this.taskId , completionDate = this.completionDate
+)
+fun TaskCompletionDTO.toTaskCompletion(syncState: SYNC_STATE = SYNC_STATE.SYNCED) = TaskCompletion(
+    id = this.id , taskId = this.taskId , completionDate = this.completionDate , syncState = syncState
 )

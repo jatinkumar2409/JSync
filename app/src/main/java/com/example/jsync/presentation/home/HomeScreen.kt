@@ -424,13 +424,41 @@ fun HomeScreen(viewModel : MainViewModel) {
                                             showBottomSheet = true
                                     }
                                 ) { it ->
-                                    viewModel.updateTask(
-                                        tasksFromRoom.first { it.id == task.id }.toTaskDto().copy(
-                                            hasDone = it
-                                        )
-                                    ){
-                                        Toast.makeText(context, "Error :$it", Toast.LENGTH_SHORT)
-                                            .show()
+                                    val currentTask =  tasksFromRoom.first { it.id == task.id }.toTaskDto()
+                                    if(task.type != 2) {
+                                        viewModel.updateTask(
+                                           currentTask
+                                                .copy(
+                                                    hasDone = it
+                                                )
+                                        ) { e ->
+                                            Toast.makeText(
+                                                context,
+                                                "Error :$e",
+                                                Toast.LENGTH_SHORT
+                                            )
+                                                .show()
+                                        }
+                                    }
+                                    else{
+                                        if(it){
+                                            viewModel.addTaskCompletion(currentTask){ e ->
+                                                Toast.makeText(context, "Error :$e", Toast.LENGTH_SHORT)
+                                                    .show()
+                                            }
+                                        }
+                                        else{
+                                            viewModel.deleteTaskCompletion(currentTask){ e->
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error :$e",
+                                                    Toast.LENGTH_SHORT
+                                                )
+                                                    .show()
+
+                                            }
+
+                                        }
                                     }
                                 }
                             }

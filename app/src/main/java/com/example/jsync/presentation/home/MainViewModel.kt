@@ -1,6 +1,7 @@
 package com.example.jsync.presentation.home
 
 import android.util.Log
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -12,15 +13,21 @@ import androidx.lifecycle.viewModelScope
 import com.example.jsync.core.helpers.NetworkObserver
 import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.core.helpers.prefDatastore
+import com.example.jsync.core.helpers.toTaskCompletion
+import com.example.jsync.core.helpers.toTaskCompletionDto
 import com.example.jsync.core.helpers.toTaskDto
 import com.example.jsync.core.helpers.toTaskEntity
 import com.example.jsync.core.helpers.toTaskForUi
+import com.example.jsync.data.models.TaskCompletionDTO
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.data.models.TaskForUi
 import com.example.jsync.data.models.WebsocketMessage
 import com.example.jsync.data.room.entities.SYNC_STATE
+import com.example.jsync.data.room.entities.TaskCompletion
 import com.example.jsync.data.room.entities.TaskEntity
 import com.example.jsync.domain.tasks.repos.MainRepository
+import com.example.jsync.domain.tasks.repos.TaskCompletionRepo
+import com.example.jsync.domain.tasks.repos.TaskRepository
 import com.example.jsync.domain.tasks.usecases.AddTaskUseCase
 import com.example.jsync.domain.tasks.usecases.LoadTasksUseCase
 import com.example.jsync.domain.websockets.repo.WebSocketsRepo
@@ -41,9 +48,10 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainViewModel(private val networkObserver: NetworkObserver ,
-    private val addTaskUseCase: AddTaskUseCase , val prefDatastore: prefDatastore ,  private val webSocketsRepo: WebSocketsRepo, private val loadTasksUseCase: LoadTasksUseCase ,
+    private val taskRepo : TaskRepository , val prefDatastore: prefDatastore ,  private val webSocketsRepo: WebSocketsRepo, private val taskCompletionRepo: TaskCompletionRepo ,
     private val mainRepo : MainRepository
 ) : ViewModel() {
     private val _networkStatus = MutableStateFlow(false)
@@ -54,6 +62,11 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     val selectedDate = selectedDate_.asStateFlow()
 
     val localTasks = MutableStateFlow<Map<String , TaskForUi>>(emptyMap())
+    val taskCompletions = selectedDate.flatMapLatest { date ->
+        taskCompletionRepo.getTaskCompletionsOfDate(date)
+    }.stateIn(
+        viewModelScope , SharingStarted.WhileSubscribed(5000) , emptyList()
+    )
     val tasksFromRoom = prefDatastore.userId.filter { !(it.isNullOrEmpty() || it.trim().isEmpty()) }
         .flatMapLatest { userId ->
             mainRepo.getDisplayableTasks(userId!!)
@@ -94,7 +107,14 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     ){ date , userId ->
         date to userId
     }.flatMapLatest { (date , userId) ->
-        mainRepo.getTasksOfDate(belongsToDate = date , userId = userId)
+       val tasksFlow =  mainRepo.getTasksOfDate(belongsToDate = date , userId = userId)
+        val taskCompletionsFlow = taskCompletionRepo.getTaskCompletionsOfDate(date)
+        combine(tasksFlow , taskCompletionsFlow){ tasks , taskCompletions ->
+            tasks.map { task ->
+                task.copy(hasDone = task.id in taskCompletions
+                    .map { it.taskId })
+            }
+        }
     }.stateIn(
         viewModelScope , SharingStarted.WhileSubscribed(5000) , emptyList()
     )
@@ -122,6 +142,19 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
             isLoading.value = false
         }
     }
+    fun loadTasksCompletionsOfDate(){
+        viewModelScope.launch {
+            try {
+              selectedDate_.collect { date ->
+                  taskCompletionRepo.loadTaskCompletionOfDateFromServer(date)
+              }
+            }
+            catch (e : Exception){
+                error_.value = e.message.toString()
+            }
+        }
+    }
+
     fun upsertTaskLocally(task : TaskEntity){
         viewModelScope.launch {
             mainRepo.upsertSyncedTask(task)
@@ -199,15 +232,72 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
                             "error_for_task" -> SYNC_STATE.TO_BE_CREATED
                             "error_for_update_task" -> SYNC_STATE.TO_BE_UPDATED
                             "error_for_delete_task" -> SYNC_STATE.TO_BE_DELETED
-                            else -> return@collect
+                            else -> null
                         }
-                        changeTasksLocally(message.task?.toTaskForUi()!!.copy(
-                            syncState = prevSync
-                        ))
+                        prevSync?.let {
+                            changeTasksLocally(
+                                message.task?.toTaskForUi()!!.copy(
+                                    syncState = prevSync
+                                )
+                            )
+                        }
+                        if(message.type == "error_for_task_completion"){
+
+                        }
+
+                    }
+                    else if(message.type == "task_completion"){
+                        val taskCompletion = message.taskCompletion!!
+                        taskCompletionRepo.upsertSyncedTaskCompletion(taskCompletion.toTaskCompletion(
+                            SYNC_STATE.SYNCED))
+                    }
+                    else if(message.type == "delete_task_completion"){
+                        val taskCompletion = message.taskCompletion!!
+                        taskCompletionRepo.deleteSyncedTaskCompletion(taskCompletion.toTaskCompletion())
                     }
                 }
 
         }
+    }
+    fun addTaskCompletion(taskDTO: TaskDTO , onError: (String) -> Unit){
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val taskCompletionDto = TaskCompletionDTO(
+                    id = UUID.randomUUID().toString() , taskId = taskDTO.id , completionDate = taskDTO.belongsToDate , isDeleted = false
+                )
+                taskCompletionRepo.upsertSyncedTaskCompletion(TaskCompletion(
+                    taskId = taskDTO.id , completionDate = taskDTO.belongsToDate  , syncState = SYNC_STATE.TO_BE_CREATED
+                ))
+                webSocketsRepo.sendTask(
+                    WebsocketMessage(
+                            type = "task_completion" , taskCompletion = taskCompletionDto
+                    )
+                )
+            } catch (e: Exception) {
+                onError(e.message.toString())
+            }
+        }
+    }
+    fun deleteTaskCompletion(taskDTO: TaskDTO , onError: (String) -> Unit){
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                taskCompletionRepo.deleteSyncedTaskCompletion(
+                    TaskCompletion(
+                        taskId = taskDTO.id , completionDate = taskDTO.belongsToDate , syncState = SYNC_STATE.TO_BE_DELETED
+
+                    )
+                )
+                webSocketsRepo.sendTask(
+                    WebsocketMessage(
+                        type = "delete_task_completion" , task = taskDTO
+                    )
+                )
+            }
+            catch (e : Exception){
+                onError(e.message.toString())
+            }
+        }
+
     }
     fun deleteTask(taskDTO: TaskDTO , onError: (String) -> Unit){
         viewModelScope.launch(Dispatchers.IO) {
@@ -243,25 +333,39 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
             }
         }
     }
-    fun retryTask(task : TaskEntity){
-        changeTasksLocally(task.toTaskForUi().copy(
-            syncState = SYNC_STATE.SYNCING
-        ))
-        viewModelScope.launch {
-          val locked =  mainRepo.retryTask(
-                task = task
-            )
-            if(locked){
-                webSocketsRepo.sendTask(
-                    WebsocketMessage(
-                        type = when(task.syncState){
-                            SYNC_STATE.TO_BE_CREATED -> "task"
-                            SYNC_STATE.TO_BE_UPDATED -> "update_task"
-                            SYNC_STATE.TO_BE_DELETED -> "delete_task"
-                            else -> return@launch
-                        } ,  task = task.toTaskDto()
-                    )
+    fun retryTask(task : TaskEntity , taskCompletion : TaskCompletion?){
+        if(taskCompletion == null) {
+            changeTasksLocally(
+                task.toTaskForUi().copy(
+                    syncState = SYNC_STATE.SYNCING
                 )
+            )
+
+            viewModelScope.launch(Dispatchers.IO) {
+                val locked = mainRepo.retryTask(
+                    task = task
+                )
+                if (locked) {
+                    webSocketsRepo.sendTask(
+                        WebsocketMessage(
+                            type = when (task.syncState) {
+                                SYNC_STATE.TO_BE_CREATED -> "task"
+                                SYNC_STATE.TO_BE_UPDATED -> "update_task"
+                                SYNC_STATE.TO_BE_DELETED -> "delete_task"
+                                else -> return@launch
+                            }, task = task.toTaskDto()
+                        )
+                    )
+                }
+            }
+        }
+        else{
+            viewModelScope.launch(Dispatchers.IO) {
+               webSocketsRepo.sendTask(
+                   WebsocketMessage(
+                      type = "task_completion" , taskCompletion = taskCompletion.toTaskCompletionDto()
+                   )
+               )
             }
         }
     }

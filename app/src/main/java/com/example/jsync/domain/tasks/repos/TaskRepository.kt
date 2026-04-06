@@ -1,5 +1,6 @@
 package com.example.jsync.domain.tasks.repos
 
+import com.example.jsync.data.models.TaskCompletionDTO
 import com.example.jsync.data.models.TaskDTO
 
 interface TaskRepository {
@@ -9,6 +10,5 @@ interface TaskRepository {
     suspend fun updateTask(task : TaskDTO) : Result<Boolean>
 
     suspend fun  deleteTask(taskId : String) : Result<Boolean>
-
 
 }
