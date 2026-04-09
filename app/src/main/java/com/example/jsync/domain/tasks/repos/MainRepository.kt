@@ -11,6 +11,8 @@ interface MainRepository {
     suspend fun updateTask(task : TaskEntity) : TaskEntity
     suspend fun deleteTask(task : TaskEntity)
 
+    suspend fun getAllTasks() : Flow<List<TaskEntity>>
+
     suspend fun retryTask(task : TaskEntity) : Boolean
     suspend fun upsertSyncedTask(task : TaskEntity)
 

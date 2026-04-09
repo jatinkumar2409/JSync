@@ -23,18 +23,18 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.Flow
 
 class TaskCompletionRepoImpl(
-    private val taskCompletionDao : TaskCompletionDao , private val syncSchedular: SyncSchedular ,
+    private val taskCompletionDao : TaskCompletionDao ,
     private val manageToken : manageToken
 ) : TaskCompletionRepo {
     private val client = GetClient.getClient(connectionTimeout = 30_000L , requestTimeout = 30_000L , socketTimeout = 60_000L)
 
-    override suspend fun addTaskCompletion(task: TaskDTO): Result<Boolean> {
+    override suspend fun addTaskCompletion(taskCompletion: TaskCompletionDTO): Result<Boolean> {
         try {
             val token = manageToken.getAccessToken() ?: ""
             val response = client.post("/add_task_completion"){
                 header("Authorization" , "Bearer $token")
                 contentType(ContentType.Application.Json)
-                setBody(task)
+                setBody(taskCompletion)
             }
             if(response.status.isSuccess()){
                 return Result.success(true)
@@ -48,12 +48,12 @@ class TaskCompletionRepoImpl(
             return Result.failure(e)
         }
     }
-    override suspend fun updateTaskCompletion(task: TaskDTO): Result<Boolean> {
+    override suspend fun updateTaskCompletion(taskCompletion: TaskCompletionDTO): Result<Boolean> {
         try {
             val token = manageToken.getAccessToken() ?: ""
             val response = client.put("/update_task_completion"){
                 header("Authorization" , "Bearer $token")
-                setBody(task)
+                setBody(taskCompletion)
                 contentType(ContentType.Application.Json)
             }
             if(response.status.isSuccess()){
@@ -88,14 +88,14 @@ class TaskCompletionRepoImpl(
         }
     }
 
-    override suspend fun loadTasksCompletion(): Result<List<TaskDTO>> {
+    override suspend fun loadTasksCompletion(): Result<List<TaskCompletionDTO>> {
         try {
             val token = manageToken.getAccessToken() ?: ""
             val response = client.get("/load_tasks_completions"){
                 header("Authorization" , "Bearer $token")
             }
             if (response.status.isSuccess()){
-                return Result.success(response.body<List<TaskDTO>>())
+                return Result.success(response.body<List<TaskCompletionDTO>>())
             }
             else{
                 val errorBody = response.body<ErrorResponse>()

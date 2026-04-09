@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.jsync.core.helpers.NetworkObserver
 import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.core.helpers.prefDatastore
+import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.core.helpers.toTaskCompletion
 import com.example.jsync.core.helpers.toTaskCompletionDto
 import com.example.jsync.core.helpers.toTaskDto
@@ -89,7 +90,9 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
              mainRepo.getDisplayableTasks(userId!!) , localTasks
          ){ dbTasks , localMap ->
              dbTasks.map { task ->
-                  localMap[task.id] ?: task.toTaskForUi()
+                  localMap[task.id] ?: task.toTaskForUi().copy(
+
+                  )
              }
          }
      }.stateIn(
@@ -107,30 +110,47 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     ){ date , userId ->
         date to userId
     }.flatMapLatest { (date , userId) ->
+        Log.d("tag23" , "Flap map latest is running of date ${timeHelper.formatDate(date)} and userId is $userId")
        val tasksFlow =  mainRepo.getTasksOfDate(belongsToDate = date , userId = userId)
         val taskCompletionsFlow = taskCompletionRepo.getTaskCompletionsOfDate(date)
-        combine(tasksFlow , taskCompletionsFlow){ tasks , taskCompletions ->
+         combine(tasksFlow , taskCompletionsFlow){ tasks , taskCompletions ->
             tasks.map { task ->
-                task.copy(hasDone = task.id in taskCompletions
-                    .map { it.taskId })
+                Log.d("tag23" , "task is $task")
+                val taskCompletion = taskCompletions.firstOrNull{ it.taskId == task.id }
+                task.copy(hasDone = if(task.type == 2) task.id in taskCompletions
+                        .map { it.taskId } else task.hasDone, syncState = if(taskCompletion == null) task.syncState else if (taskCompletion.syncState == SYNC_STATE.TO_BE_DELETED) SYNC_STATE.TO_DELETE_TASK_COMPLETION else SYNC_STATE.TO_ADD_TASK_COMPLETION
+                )
             }
-        }
+        }.combine(localTasks){ tasks , localTasks ->
+            tasks.map { task ->
+                localTasks[task.id] ?: task.toTaskForUi()
+            }
+         }
     }.stateIn(
         viewModelScope , SharingStarted.WhileSubscribed(5000) , emptyList()
     )
 
-    val tasksForUi by derivedStateOf {
-        tasksOfDate.map { tasks -> tasks.map {
-            it.toTaskForUi()
-        } }
-    }
+//    val tasksForUi by derivedStateOf {
+//        tasksOfDate.map { tasks -> tasks.map {
+//            it.toTaskForUi()
+//        } }
+//    }
    init {
        observeNetwork()
        connectToWebSocket()
        getNewTasks()
+       loadTasksCompletionsOfDate()
+       getAllTasks()
    }
     fun updateSelectedDate(date : Long){
         selectedDate_.value = date
+    }
+    fun getAllTasks(){
+        viewModelScope.launch(Dispatchers.IO) {
+            mainRepo.getAllTasks().collect { tasks ->
+                Log.d("tasksTag"  , "All tasks are $tasks")
+            }
+        }
     }
     fun loadTasks(){
         viewModelScope.launch(Dispatchers.IO) {
@@ -333,8 +353,8 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
             }
         }
     }
-    fun retryTask(task : TaskEntity , taskCompletion : TaskCompletion?){
-        if(taskCompletion == null) {
+    fun retryTask(task : TaskEntity , taskCompletion : TaskCompletion? = null){
+        if(task.syncState !in listOf(SYNC_STATE.TO_ADD_TASK_COMPLETION , SYNC_STATE.TO_DELETE_TASK_COMPLETION)) {
             changeTasksLocally(
                 task.toTaskForUi().copy(
                     syncState = SYNC_STATE.SYNCING
@@ -363,7 +383,7 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
             viewModelScope.launch(Dispatchers.IO) {
                webSocketsRepo.sendTask(
                    WebsocketMessage(
-                      type = "task_completion" , taskCompletion = taskCompletion.toTaskCompletionDto()
+                      type = "task_completion" , taskCompletion = taskCompletion!!.toTaskCompletionDto()
                    )
                )
             }

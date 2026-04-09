@@ -31,10 +31,8 @@ import java.util.concurrent.TimeUnit
 
 class MainRepoImplementation(
     private val dao : TaskDao ,
-    private val taskCompletionDao: TaskCompletionDao ,
     private val context : Context ,
     private val repo : TaskRepository ,
-    private val taskCompletionRepo : TaskCompletionRepo ,
     private val prefDatastore : prefDatastore ,
     private val syncSchedular: SyncSchedular
 ) : MainRepository {
@@ -107,9 +105,14 @@ class MainRepoImplementation(
                     syncState = SYNC_STATE.TO_BE_DELETED , updatedAt = System.currentTimeMillis()
                 )
             )
-            prefDatastore.saveUserId(task.id)
+            prefDatastore.saveToBeDeleted(task.id)
             syncSchedular.enqueueSync()
         }
+    }
+
+    override suspend fun getAllTasks(): Flow<List<TaskEntity>> {
+//        val userId = prefDatastore.userId.first() ?: ""
+        return dao.getAllTasks()
     }
 
     override suspend fun retryTask(task: TaskEntity) : Boolean {

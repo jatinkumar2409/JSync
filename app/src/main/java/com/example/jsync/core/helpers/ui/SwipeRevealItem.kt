@@ -214,20 +214,20 @@ fun TaskItem(task : TaskForUi = TaskForUi(
              actionWidthPx : Float = 0.0f, onSyncClicked : () -> Unit = {} , onFailedDeleteWarningClicked : () -> Unit = {}
 ) {
     Log.d("tag3" , "Sync state of ${task.taskName} is : ${task.syncState}")
-//    val rotation = if (task.syncState == SYNC_STATE.SYNCING) {
-//        val transition = rememberInfiniteTransition(label = "sync_rotation")
-//        transition.animateFloat(
-//            initialValue = 0f,
-//            targetValue = 360f,
-//            animationSpec = infiniteRepeatable(
-//                animation = tween(1200, easing = LinearEasing),
-//                repeatMode = RepeatMode.Restart
-//            ),
-//            label = "rotation_anim"
-//        ).value
-//    } else {
-//        0f
-//    }
+    val rotation = if (task.syncState == SYNC_STATE.SYNCING) {
+        val transition = rememberInfiniteTransition(label = "sync_rotation")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "rotation_anim"
+        ).value
+    } else {
+        0f
+    }
 
     Box(modifier = Modifier
         .offset{
@@ -340,7 +340,7 @@ fun TaskItem(task : TaskForUi = TaskForUi(
                             }
                         }) {
                             Icon(
-//                                modifier = Modifier.rotate(rotation),
+                                modifier = Modifier.rotate(rotation),
                                 imageVector = when(task.syncState){
                                     SYNC_STATE.SYNCED -> Icons.Default.Done
                                     SYNC_STATE. FAILED_DELETE -> Icons.Default.Warning

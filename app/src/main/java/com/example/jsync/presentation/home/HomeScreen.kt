@@ -76,10 +76,11 @@ import com.example.jsync.ui.theme.blue80
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel : MainViewModel) {
-    val tasksOfDate by viewModel.tasksOfDate.collectAsStateWithLifecycle()
-    val tasks by remember(tasksOfDate) {
-        derivedStateOf { tasksOfDate.map { it.toTaskForUi() } }
-    }
+    val tasks by viewModel.tasksOfDate.collectAsStateWithLifecycle()
+//    val tasks by remember(tasksOfDate) {
+//        derivedStateOf { tasksOfDate.map { it.toTaskForUi() } }
+//    }
+    val taskCompletions by viewModel.taskCompletions.collectAsStateWithLifecycle()
     val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
     val tasksFromRoom by viewModel.tasksFromRoom.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading
@@ -409,7 +410,8 @@ fun HomeScreen(viewModel : MainViewModel) {
                                         showBinaryDialog = true
                                     }, onSyncClicked = {
                                         if (networkStatus) {
-                                            viewModel.retryTask(tasksFromRoom.first { it.id == task.id })
+                                            viewModel.retryTask(task =
+                                                tasksFromRoom.first { it.id == task.id } , taskCompletion = taskCompletions.firstOrNull { it.taskId == task.id })
                                         } else {
                                             Toast.makeText(
                                                 context,

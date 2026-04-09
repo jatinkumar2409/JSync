@@ -143,10 +143,8 @@ class SyncWorkerForTasks(
             for (taskCompletion in pendingTaskCompletions) {
                 Log.d("WORKER", "Processing task: id=${taskCompletion.id}, state=${taskCompletion.syncState}")
 
-                val locked = taskCompletionDao.updateTaskCompletionStateIfUnchanged(
-                    syncState = SYNC_STATE.SYNCING,
-                    id = taskCompletion.id,
-                    fromState = taskCompletion.syncState
+                val locked =  taskCompletionDao.updateStateIfUnchanged(
+                    id = taskCompletion.id , syncState = SYNC_STATE.SYNCING  , expectedState = taskCompletion.syncState
                 )
 
                 Log.d("WORKER", "Lock result for task ${taskCompletion.id}: $locked")
@@ -158,42 +156,30 @@ class SyncWorkerForTasks(
 
                 try {
                     when (taskCompletion.syncState) {
-
                         SYNC_STATE.TO_BE_CREATED -> {
                             Log.d("WORKER", "Calling addTask for ${taskCompletion.id}")
-                            taskCompletionRepo.upsertTaskCompletion(taskCompletion)
-                            dao.markSyncedIfUnchanged(
-                                id = task.id,
-                                userId = userId,
-                                expectedUpdatedAt = task.updatedAt
-                            )
-                            Log.d("WORKER", "Marked CREATED task synced: ${task.id}")
+                           val result =  taskCompletionRepo.addTaskCompletion(taskCompletion.toTaskCompletionDto())
+                            result.onSuccess {
+                                taskCompletionDao.updateStateIfUnchanged(
+                                    id = taskCompletion.id,
+                                    expectedState = SYNC_STATE.SYNCING,
+                                    syncState = SYNC_STATE.SYNCED
+                                )
+                                Log.d("WORKER", "Marked CREATED task synced: ${taskCompletion.id}")
+                            }
                         }
 
-                        SYNC_STATE.TO_BE_UPDATED -> {
-                            Log.d("WORKER", "Calling updateTask for ${task.id}")
-                            val result = repo.updateTask(task.toTaskDto())
-                            Log.d("WORKER", "updateTask result: $result")
-
-                            dao.markSyncedIfUnchanged(
-                                id = task.id,
-                                userId = userId,
-                                expectedUpdatedAt = task.updatedAt
-                            )
-                            Log.d("WORKER", "Marked UPDATED task synced: ${task.id}")
-                        }
 
                         SYNC_STATE.TO_BE_DELETED -> {
-                            Log.d("WORKER", "Calling deleteTask for ${task.id}")
-                            val result = repo.deleteTask(task.id)
+                            Log.d("WORKER", "Calling deleteTask for ${taskCompletion.id}")
+                            val result = repo.deleteTask(taskCompletion.id)
                             Log.d("WORKER", "deleteTask result: $result")
-                            if(result.isSuccess){
-                                dao.deleteTask(task)
-                                prefDatastore.removeToBeDeleted(task.id)
+                            if(result.isSuccess){ taskCompletionDao.deleteTaskCompletion(taskCompletion)
+//                                prefDatastore.removeToBeDeleted(task.id)
                             }
                             else{
-                                dao.upsertTask(
-                                    task.copy(
+                                taskCompletionDao.upsertTaskCompletion(
+                                    taskCompletion.copy(
                                         syncState = SYNC_STATE.FAILED_DELETE
                                     )
                                 )
@@ -201,18 +187,18 @@ class SyncWorkerForTasks(
                         }
 
                         else -> {
-                            Log.d("WORKER", "Unknown state for task ${task.id}")
+                            Log.d("WORKER", "Unknown state for task ${taskCompletion.id}")
                         }
                     }
 
                 } catch (e: IOException) {
-                    Log.e("WORKER", "IOException for task ${task.id}: ${e.message}", e)
+                    Log.e("WORKER", "IOException for task ${taskCompletion.id}: ${e.message}", e)
                     shouldRetry = true
                 }
 
                 catch (e: ClientRequestException) {
                     val status = e.response.status.value
-                    Log.e("WORKER", "ClientRequestException for task ${task.id}: status=$status, msg=${e.message}", e)
+                    Log.e("WORKER", "ClientRequestException for task ${taskCompletion.id}: status=$status, msg=${e.message}", e)
 
                     if (status == 500) {
                         Log.d("WORKER", "Server error (500) → will retry")
@@ -236,7 +222,7 @@ class SyncWorkerForTasks(
                 }
 
                 catch (e: Exception) {
-                    Log.e("WORKER", "Generic Exception for task ${task.id}: ${e.message}", e)
+                    Log.e("WORKER", "Generic Exception for task ${taskCompletion.id}: ${e.message}", e)
                     shouldRetry = true
                 }
             }

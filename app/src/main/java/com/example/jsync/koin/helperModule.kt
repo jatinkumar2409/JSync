@@ -24,7 +24,7 @@ val helperModule = module {
     }
     worker {
         SyncWorkerForTasks(
-            get() , get() , get() , get() , get() , get()
+            get() , get() , get() , get() , get() , get() , get() , get()
         )
     }
     single {

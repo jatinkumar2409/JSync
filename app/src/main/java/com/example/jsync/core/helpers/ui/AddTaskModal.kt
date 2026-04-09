@@ -339,6 +339,7 @@ fun AddTaskModal(
                             priority = prioritySelection,
                             hasDone = task_.hasDone,
                             tags = tags.joinToString(",") ,
+                            expiryTime = if (taskTypeSelection == 0) timeHelper.getEndOfDay(System.currentTimeMillis()) else null,
                             belongsToDate = if(System.currentTimeMillis() >= timeHelper.getEndOfDay(date)) System.currentTimeMillis() else date
                         )
                       onAddTask(task)

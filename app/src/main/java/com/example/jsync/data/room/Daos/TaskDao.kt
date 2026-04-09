@@ -18,10 +18,10 @@ interface TaskDao {
     @Delete
     suspend fun deleteTask(task : TaskEntity)
 
-    @Query("SELECT * FROM tasks WHERE userId = :userId")
-    fun getAllTasks(userId : String) : Flow<List<TaskEntity>>
+    @Query("SELECT * FROM tasks")
+    fun getAllTasks() : Flow<List<TaskEntity>>
 
-    @Query("SELECT * FROM tasks WHERE userId = :userId AND syncState != 'TO_BE_DELETED' ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND syncState != 'TO_BE_DELETED' ORDER BY priority DESC")
     fun getDisplayableTasks(userId: String) : Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE userId = :userId AND syncState != 'SYNCED' ORDER BY updatedAt ASC")
@@ -52,13 +52,21 @@ interface TaskDao {
 
     @Query("""
         SELECT * FROM tasks WHERE userId = :userId AND syncState != 'TO_BE_DELETED' 
- AND belongsToDate BETWEEN :startOfDay AND :endOfDay
-ORDER BY updatedAt DESC
+ AND (
+  (
+    type = 1 AND belongsToDate BETWEEN :startOfDay AND :endOfDay
+  ) OR (
+    type = 0 AND belongsToDate BETWEEN :startOfDay AND :endOfDay AND :currentTime < expiryTime
+  ) OR (
+      type = 2 AND belongsToDate <= :endOfDay 
+  )
+ )
     """)
     fun getTasksByDate(
         userId: String,
         startOfDay: Long,
-        endOfDay: Long
+        endOfDay: Long ,
+        currentTime : Long = System.currentTimeMillis()
     ): Flow<List<TaskEntity>>
 
 }

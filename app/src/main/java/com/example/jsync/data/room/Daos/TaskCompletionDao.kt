@@ -18,13 +18,6 @@ interface TaskCompletionDao {
     suspend fun deleteTaskCompletion(taskCompletion : TaskCompletion)
 
     @Query("""
-          UPDATE taskCompletions
-        SET syncState = :syncState
-        WHERE id = :id  AND syncState = :fromState
-    """)
-    suspend fun updateTaskCompletionStateIfUnchanged(syncState : SYNC_STATE , id : String , fromState : SYNC_STATE) : Int
-
-    @Query("""
         SELECT * FROM taskCompletions WHERE completionDate BETWEEN :startDate AND :endDate
     """)
     fun getTaskCompletionOfDate(startDate : Long , endDate : Long) : Flow<List<TaskCompletion>>
@@ -34,5 +27,16 @@ interface TaskCompletionDao {
     """)
     suspend fun getPendingTaskCompletions() : List<TaskCompletion>
 
+    @Query(
+        """
+            UPDATE taskCompletions 
+            SET syncState = :syncState 
+            WHERE id = :id and syncState = :expectedState
+        """
+    )
+    suspend fun updateStateIfUnchanged(
+        id: String,
+        expectedState: SYNC_STATE,
+        syncState: SYNC_STATE) : Int
 
 }
