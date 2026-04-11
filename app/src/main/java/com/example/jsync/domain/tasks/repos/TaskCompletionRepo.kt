@@ -12,7 +12,9 @@ interface TaskCompletionRepo {
     suspend fun loadTasksCompletion(): Result<List<TaskCompletionDTO>>
     suspend fun loadTaskCompletionOfDateFromServer(date: Long): Result<List<TaskCompletionDTO>>
 
-    suspend fun getTaskCompletionsOfDate(date : Long) : Flow<List<TaskCompletion>>
+    suspend fun getTaskCompletionsOfDate(date : Long , userId : String) : Flow<List<TaskCompletion>>
+
+    suspend fun getAllTaskCompletions() : Flow<List<TaskCompletion>>
 
     suspend fun upsertSyncedTaskCompletion(taskCompletion : TaskCompletion)
     suspend fun deleteSyncedTaskCompletion(taskCompletion : TaskCompletion)

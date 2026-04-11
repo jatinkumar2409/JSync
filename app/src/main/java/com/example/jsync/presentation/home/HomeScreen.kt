@@ -411,7 +411,9 @@ fun HomeScreen(viewModel : MainViewModel) {
                                     }, onSyncClicked = {
                                         if (networkStatus) {
                                             viewModel.retryTask(task =
-                                                tasksFromRoom.first { it.id == task.id } , taskCompletion = taskCompletions.firstOrNull { it.taskId == task.id })
+                                                tasksFromRoom.first { it.id == task.id }.copy(
+                                                    syncState = task.syncState
+                                                ) , taskCompletion = taskCompletions.firstOrNull { it.taskId == task.id })
                                         } else {
                                             Toast.makeText(
                                                 context,
@@ -450,7 +452,7 @@ fun HomeScreen(viewModel : MainViewModel) {
                                             }
                                         }
                                         else{
-                                            viewModel.deleteTaskCompletion(currentTask){ e->
+                                            viewModel.deleteTaskCompletion(taskCompletions.first{ it.taskId == currentTask.id }){ e->
                                                 Toast.makeText(
                                                     context,
                                                     "Error :$e",

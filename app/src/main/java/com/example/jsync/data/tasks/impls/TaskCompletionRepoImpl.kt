@@ -3,6 +3,7 @@ package com.example.jsync.data.tasks.impls
 import com.example.jsync.core.helpers.GetClient
 import com.example.jsync.core.helpers.SyncSchedular
 import com.example.jsync.core.helpers.manageToken
+import com.example.jsync.core.helpers.prefDatastore
 import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.data.models.ErrorResponse
 import com.example.jsync.data.models.TaskCompletionDTO
@@ -128,10 +129,14 @@ class TaskCompletionRepoImpl(
         }
     }
 
-    override suspend fun getTaskCompletionsOfDate(date: Long): Flow<List<TaskCompletion>> {
+    override suspend fun getTaskCompletionsOfDate(date: Long , userId : String): Flow<List<TaskCompletion>> {
         return taskCompletionDao.getTaskCompletionOfDate(
-            startDate = timeHelper.getStartOfDay(date) , endDate = timeHelper.getEndOfDay(date)
+            startDate = timeHelper.getStartOfDay(date) , endDate = timeHelper.getEndOfDay(date) , userId = userId
         )
+    }
+
+    override suspend fun getAllTaskCompletions(): Flow<List<TaskCompletion>> {
+        return taskCompletionDao.getAllTaskCompletions()
     }
 
     override suspend fun upsertSyncedTaskCompletion(taskCompletion: TaskCompletion) {

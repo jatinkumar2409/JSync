@@ -18,9 +18,11 @@ interface TaskCompletionDao {
     suspend fun deleteTaskCompletion(taskCompletion : TaskCompletion)
 
     @Query("""
-        SELECT * FROM taskCompletions WHERE completionDate BETWEEN :startDate AND :endDate
+        SELECT taskCompletions.* FROM taskCompletions INNER JOIN tasks ON taskCompletions.taskId = tasks.id
+        WHERE tasks.userId = :userId AND
+               taskCompletions.completionDate BETWEEN :startDate AND :endDate
     """)
-    fun getTaskCompletionOfDate(startDate : Long , endDate : Long) : Flow<List<TaskCompletion>>
+    fun getTaskCompletionOfDate(startDate : Long , endDate : Long , userId : String) : Flow<List<TaskCompletion>>
 
     @Query("""
         SELECT * FROM taskCompletions WHERE syncState != 'SYNCED'
@@ -38,5 +40,8 @@ interface TaskCompletionDao {
         id: String,
         expectedState: SYNC_STATE,
         syncState: SYNC_STATE) : Int
+
+    @Query("SELECT * FROM taskCompletions")
+    fun getAllTaskCompletions() : Flow<List<TaskCompletion>>
 
 }

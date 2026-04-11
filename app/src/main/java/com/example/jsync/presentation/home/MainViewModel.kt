@@ -63,10 +63,14 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     val selectedDate = selectedDate_.asStateFlow()
 
     val localTasks = MutableStateFlow<Map<String , TaskForUi>>(emptyMap())
-    val taskCompletions = selectedDate.flatMapLatest { date ->
-        taskCompletionRepo.getTaskCompletionsOfDate(date)
+    val taskCompletions = combine(
+        selectedDate , prefDatastore.userId.filterNotNull()
+    ){ date , userId ->
+        date to userId
+    }.flatMapLatest { (date , userId) ->
+        taskCompletionRepo.getTaskCompletionsOfDate(date , userId)
     }.stateIn(
-        viewModelScope , SharingStarted.WhileSubscribed(5000) , emptyList()
+        viewModelScope , SharingStarted.WhileSubscribed(5000L) , emptyList()
     )
     val tasksFromRoom = prefDatastore.userId.filter { !(it.isNullOrEmpty() || it.trim().isEmpty()) }
         .flatMapLatest { userId ->
@@ -112,13 +116,18 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     }.flatMapLatest { (date , userId) ->
         Log.d("tag23" , "Flap map latest is running of date ${timeHelper.formatDate(date)} and userId is $userId")
        val tasksFlow =  mainRepo.getTasksOfDate(belongsToDate = date , userId = userId)
-        val taskCompletionsFlow = taskCompletionRepo.getTaskCompletionsOfDate(date)
+        val taskCompletionsFlow = taskCompletionRepo.getTaskCompletionsOfDate(date , userId)
          combine(tasksFlow , taskCompletionsFlow){ tasks , taskCompletions ->
             tasks.map { task ->
                 Log.d("tag23" , "task is $task")
                 val taskCompletion = taskCompletions.firstOrNull{ it.taskId == task.id }
                 task.copy(hasDone = if(task.type == 2) task.id in taskCompletions
-                        .map { it.taskId } else task.hasDone, syncState = if(taskCompletion == null) task.syncState else if (taskCompletion.syncState == SYNC_STATE.TO_BE_DELETED) SYNC_STATE.TO_DELETE_TASK_COMPLETION else SYNC_STATE.TO_ADD_TASK_COMPLETION
+                        .map { it.taskId } else task.hasDone, syncState = if(taskCompletion == null) task.syncState else {
+                            if(taskCompletion.syncState == SYNC_STATE.TO_BE_DELETED) SYNC_STATE.TO_DELETE_TASK_COMPLETION
+                            if (taskCompletion.syncState == SYNC_STATE.TO_BE_CREATED) SYNC_STATE.TO_ADD_TASK_COMPLETION
+                            else SYNC_STATE.SYNCED
+
+                }
                 )
             }
         }.combine(localTasks){ tasks , localTasks ->
@@ -141,10 +150,19 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
        getNewTasks()
        loadTasksCompletionsOfDate()
        getAllTasks()
+       getAllTaskCompletions()
    }
     fun updateSelectedDate(date : Long){
         selectedDate_.value = date
     }
+    fun getAllTaskCompletions(){
+        viewModelScope.launch(Dispatchers.IO) {
+            taskCompletionRepo.getAllTaskCompletions().collect { taskCompletions ->
+                Log.d("tasksTag"  , "All task completions are $taskCompletions")
+            }
+        }
+    }
+
     fun getAllTasks(){
         viewModelScope.launch(Dispatchers.IO) {
             mainRepo.getAllTasks().collect { tasks ->
@@ -255,6 +273,9 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
                             else -> null
                         }
                         prevSync?.let {
+                            mainRepo.upsertSyncedTask(message.task?.toTaskEntity()!!.copy(
+                                syncState = prevSync
+                            ))
                             changeTasksLocally(
                                 message.task?.toTaskForUi()!!.copy(
                                     syncState = prevSync
@@ -282,11 +303,12 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     fun addTaskCompletion(taskDTO: TaskDTO , onError: (String) -> Unit){
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val taskCompletionId = UUID.randomUUID().toString()
                 val taskCompletionDto = TaskCompletionDTO(
-                    id = UUID.randomUUID().toString() , taskId = taskDTO.id , completionDate = taskDTO.belongsToDate , isDeleted = false
+                    id = taskCompletionId , taskId = taskDTO.id , completionDate = taskDTO.belongsToDate , isDeleted = false
                 )
                 taskCompletionRepo.upsertSyncedTaskCompletion(TaskCompletion(
-                    taskId = taskDTO.id , completionDate = taskDTO.belongsToDate  , syncState = SYNC_STATE.TO_BE_CREATED
+                    id = taskCompletionId, taskId = taskDTO.id , completionDate = taskDTO.belongsToDate  , syncState = SYNC_STATE.TO_BE_CREATED
                 ))
                 webSocketsRepo.sendTask(
                     WebsocketMessage(
@@ -298,18 +320,15 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
             }
         }
     }
-    fun deleteTaskCompletion(taskDTO: TaskDTO , onError: (String) -> Unit){
+    fun deleteTaskCompletion(taskCompletion : TaskCompletion, onError: (String) -> Unit){
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                taskCompletionRepo.deleteSyncedTaskCompletion(
-                    TaskCompletion(
-                        taskId = taskDTO.id , completionDate = taskDTO.belongsToDate , syncState = SYNC_STATE.TO_BE_DELETED
-
-                    )
+                taskCompletionRepo.upsertSyncedTaskCompletion(
+                   taskCompletion.copy(syncState = SYNC_STATE.TO_BE_DELETED)
                 )
                 webSocketsRepo.sendTask(
                     WebsocketMessage(
-                        type = "delete_task_completion" , task = taskDTO
+                        type = "delete_task_completion" , task = null , taskCompletion = taskCompletion.toTaskCompletionDto()
                     )
                 )
             }
@@ -354,18 +373,19 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
         }
     }
     fun retryTask(task : TaskEntity , taskCompletion : TaskCompletion? = null){
+        Log.d("tag24" , "task is $task")
         if(task.syncState !in listOf(SYNC_STATE.TO_ADD_TASK_COMPLETION , SYNC_STATE.TO_DELETE_TASK_COMPLETION)) {
-            changeTasksLocally(
-                task.toTaskForUi().copy(
-                    syncState = SYNC_STATE.SYNCING
-                )
-            )
 
             viewModelScope.launch(Dispatchers.IO) {
                 val locked = mainRepo.retryTask(
                     task = task
                 )
                 if (locked) {
+//                    changeTasksLocally(
+//                        task.toTaskForUi().copy(
+//                            syncState = SYNC_STATE.SYNCING
+//                        )
+//                    )
                     webSocketsRepo.sendTask(
                         WebsocketMessage(
                             type = when (task.syncState) {
@@ -381,6 +401,7 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
         }
         else{
             viewModelScope.launch(Dispatchers.IO) {
+                Log.d("tag24" , "Sending task completion $taskCompletion")
                webSocketsRepo.sendTask(
                    WebsocketMessage(
                       type = "task_completion" , taskCompletion = taskCompletion!!.toTaskCompletionDto()

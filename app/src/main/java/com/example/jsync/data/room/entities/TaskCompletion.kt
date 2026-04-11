@@ -7,7 +7,7 @@ import java.util.UUID
 @Entity(tableName = "taskCompletions")
 data class TaskCompletion(
     @PrimaryKey(autoGenerate = false)
-    val id : String = UUID.randomUUID().toString(),
+    val id : String,
     val taskId : String ,
     val completionDate : Long ,
     val syncState : SYNC_STATE
