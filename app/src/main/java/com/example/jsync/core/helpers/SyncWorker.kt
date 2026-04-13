@@ -1,11 +1,9 @@
 package com.example.jsync.core.helpers
 
 import android.content.Context
-import android.net.http.HttpException
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.data.room.Daos.TaskCompletionDao
 import com.example.jsync.data.room.Daos.TaskDao
 import com.example.jsync.data.room.entities.SYNC_STATE
@@ -89,7 +87,7 @@ class SyncWorkerForTasks(
                             Log.d("WORKER", "deleteTask result: $result")
                             if(result.isSuccess){
                                 dao.deleteTask(task)
-                                prefDatastore.removeToBeDeleted(task.id)
+                                prefDatastore.removeToBeDeletedTasks(task.id)
                             }
                             else{
                                 dao.upsertTask(
@@ -158,7 +156,7 @@ class SyncWorkerForTasks(
                     when (taskCompletion.syncState) {
                         SYNC_STATE.TO_BE_CREATED -> {
                             Log.d("WORKER", "Calling addTask for ${taskCompletion.id}")
-                           val result =  taskCompletionRepo.addTaskCompletion(taskCompletion.toTaskCompletionDto())
+                           val result =  taskCompletionRepo.addTaskCompletionToServer(taskCompletion.toTaskCompletionDto())
                             result.onSuccess {
                                 taskCompletionDao.updateStateIfUnchanged(
                                     id = taskCompletion.id,

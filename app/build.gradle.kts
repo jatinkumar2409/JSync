@@ -79,4 +79,5 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.pref.datastore)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.compose.markdown)
 }

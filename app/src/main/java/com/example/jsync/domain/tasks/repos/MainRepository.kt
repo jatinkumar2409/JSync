@@ -13,7 +13,7 @@ interface MainRepository {
 
     suspend fun getAllTasks() : Flow<List<TaskEntity>>
 
-    suspend fun retryTask(task : TaskEntity) : Boolean
+    suspend fun retryTask(task : TaskEntity) : Int
     suspend fun upsertSyncedTask(task : TaskEntity)
 
     suspend fun deleteSyncedTask(task : TaskEntity)

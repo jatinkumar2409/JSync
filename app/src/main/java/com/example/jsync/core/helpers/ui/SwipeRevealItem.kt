@@ -295,9 +295,12 @@ fun TaskItem(task : TaskForUi = TaskForUi(
             )
         ) {
             Column(modifier = Modifier.fillMaxWidth().background(
-                brush = Brush.linearGradient(
-                    listOf(blue20, blue40 , blue80)
-                )
+               color = when(task.type){
+                   0 -> blue20
+                   1 -> blue40
+                   2 -> blue80
+                   else -> Color.Transparent
+               }
             )) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(

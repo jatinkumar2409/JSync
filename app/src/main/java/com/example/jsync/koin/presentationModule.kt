@@ -1,6 +1,7 @@
 package com.example.jsync.koin
 
 import com.example.jsync.presentation.auth.AuthScreenViewModel
+import com.example.jsync.presentation.home.AskAiViewModel
 import com.example.jsync.presentation.home.MainViewModel
 import org.koin.dsl.module
 
@@ -10,5 +11,8 @@ val presentationModule = module {
     }
     single{
         MainViewModel(get() , get() , get() , get() , get() , get())
+    }
+    single{
+        AskAiViewModel(get())
     }
     }

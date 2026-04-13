@@ -20,10 +20,11 @@ object GetClient {
         install(DefaultRequest){
             url {
               protocol = URLProtocol.HTTP
-              host = "192.168.104.241"
+              host = "192.168.138.241"
               port = 8000
             }
         }
+
         install(HttpTimeout){
             connectTimeoutMillis = connectionTimeout
             requestTimeoutMillis = requestTimeout

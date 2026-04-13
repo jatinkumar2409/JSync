@@ -19,7 +19,10 @@ import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.presentation.AuthScreen
 import com.example.jsync.presentation.HomeScreen
 import com.example.jsync.presentation.auth.AuthScreenViewModel
+import com.example.jsync.presentation.home.AskAiViewModel
 import com.example.jsync.presentation.home.MainViewModel
+import com.example.jsync.presentation.home.TaskCompletionsViewModel
+import com.example.jsync.presentation.home.TasksViewModel
 import com.example.jsync.ui.theme.JSyncTheme
 import kotlinx.coroutines.runBlocking
 import org.koin.androidx.compose.koinViewModel
@@ -45,8 +48,12 @@ class MainActivity : ComponentActivity(){
                         }
                         entry<HomeScreen> {
                             val viewModel = koinViewModel<MainViewModel>()
+                            val askAiViewModel = koinViewModel<AskAiViewModel>()
+                            val tasksViewModel = koinViewModel<TasksViewModel>()
+                            val taskCompletionsViewModel = koinViewModel<TaskCompletionsViewModel>()
                             com.example.jsync.presentation.home.HomeScreen(
-                                viewModel = viewModel
+                                viewModel = viewModel , askAiViewModel = askAiViewModel ,
+                                tasksViewModel = tasksViewModel , taskCompletionsViewModel = taskCompletionsViewModel
                             )
                         }
                     })

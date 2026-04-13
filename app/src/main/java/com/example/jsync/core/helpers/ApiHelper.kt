@@ -3,7 +3,7 @@ package com.example.jsync.core.helpers
 import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.delay
 
-object ApiHelper {
+object RetryRequest {
     suspend fun  <T> callWithRetry(
         authenticator : TokenAuthenticator ,
         maxRetries : Int = 3 ,

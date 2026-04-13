@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -62,6 +63,7 @@ import com.example.jsync.core.helpers.toTaskDto
 import com.example.jsync.core.helpers.toTaskEntity
 import com.example.jsync.core.helpers.toTaskForUi
 import com.example.jsync.core.helpers.ui.AddTaskModal
+import com.example.jsync.core.helpers.ui.AskAiModal
 import com.example.jsync.core.helpers.ui.BinaryDialog
 import com.example.jsync.core.helpers.ui.JSyncDatePicker
 import com.example.jsync.core.helpers.ui.LoadingScreen
@@ -75,26 +77,26 @@ import com.example.jsync.ui.theme.blue80
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel : MainViewModel) {
+fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskCompletionsViewModel: TaskCompletionsViewModel , askAiViewModel : AskAiViewModel) {
     val tasks by viewModel.tasksOfDate.collectAsStateWithLifecycle()
-//    val tasks by remember(tasksOfDate) {
-//        derivedStateOf { tasksOfDate.map { it.toTaskForUi() } }
-//    }
     val taskCompletions by viewModel.taskCompletions.collectAsStateWithLifecycle()
     val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
     val tasksFromRoom by viewModel.tasksFromRoom.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading
+    val isLoading by tasksViewModel.isLoading
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    var showAskAiModal by remember {
+        mutableStateOf(false)
+    }
     LaunchedEffect(Unit) {
         if(networkStatus){
             Log.d("tag" , "load tasks has called")
-            viewModel.loadTasks()
+            tasksViewModel.loadTasks()
         }
 
     }
     Log.d("tag1" , "tasks from room is ${tasks.joinToString(" , ")}")
     Log.d("tag4" , "tasks from room is ${tasksFromRoom.joinToString(" , ")}")
-
+    val aiMessages by askAiViewModel.messages.collectAsStateWithLifecycle()
     var searchTodos by remember{
         mutableStateOf("")
     }
@@ -147,7 +149,7 @@ fun HomeScreen(viewModel : MainViewModel) {
                 currentTask = null
             } , onSecondClick = {
                 if(currentTask == null) return@BinaryDialog
-                 viewModel.deleteTask(
+                 tasksViewModel.deleteTask(
                      currentTask!!
                  ){
                      Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT).show()
@@ -155,6 +157,30 @@ fun HomeScreen(viewModel : MainViewModel) {
 
                 showBinaryDialog = false
                 currentTask = null
+            }
+        )
+    }
+    if(showAskAiModal){
+        AskAiModal(
+            onDismiss = {
+                showAskAiModal = false
+            },
+            messages = aiMessages ,
+            sendEnabled = askAiViewModel.sendEnabled.value,
+            onSend = { message ->
+                if(!networkStatus){
+                    Toast.makeText(context, "Connect to internet!", Toast.LENGTH_SHORT).show()
+                    return@AskAiModal
+                }
+                askAiViewModel.changeSendEnabled(false)
+                askAiViewModel.askAi(
+                    message = message , tasks = tasksFromRoom.map { it.toTaskDto() } , onSuccess = {
+                        askAiViewModel.changeSendEnabled(true)
+                    }
+                ){
+                    Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT).show()
+                    askAiViewModel.changeSendEnabled(true)
+                }
             }
         )
     }
@@ -182,18 +208,29 @@ fun HomeScreen(viewModel : MainViewModel) {
     }
     Scaffold(
         modifier = Modifier.fillMaxSize() , floatingActionButton = {
-            IconButton(onClick =  {
-                showBottomSheet = true
-            } , colors = IconButtonDefaults.iconButtonColors(
-                containerColor = Color.Transparent , contentColor = Color.White
-            ) , modifier = Modifier
-                .clip(shape = CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(blue20, blue40, blue80)
+            Column() {
+                IconButton(
+                    onClick = {
+                        showAskAiModal = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome , contentDescription = "askAI"
                     )
-                )) {
-                Icon(imageVector = Icons.Default.Add , contentDescription = "fab")
+                }
+                IconButton(onClick = {
+                    showBottomSheet = true
+                }, colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Transparent, contentColor = Color.White
+                ), modifier = Modifier
+                    .clip(shape = CircleShape)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(blue20, blue40, blue80)
+                        )
+                    )) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "fab")
+                }
             }
         }
     ) {ip ->
@@ -201,7 +238,7 @@ fun HomeScreen(viewModel : MainViewModel) {
             modifier = Modifier.fillMaxSize() ,
             isRefreshing = false , onRefresh ={
                 if (networkStatus){
-                    viewModel.loadTasks()
+                    tasksViewModel.loadTasks()
                 }
             }
         ) {
@@ -224,7 +261,7 @@ fun HomeScreen(viewModel : MainViewModel) {
                                 onAddTask = { task ->
                                     showBottomSheet = false
 
-                                    viewModel.addTask(task){
+                                    tasksViewModel.addTask(task , selectedDate){
                                         Toast.makeText(context, "Error : $it", Toast.LENGTH_SHORT)
                                             .show()
                                     }
@@ -410,7 +447,7 @@ fun HomeScreen(viewModel : MainViewModel) {
                                         showBinaryDialog = true
                                     }, onSyncClicked = {
                                         if (networkStatus) {
-                                            viewModel.retryTask(task =
+                                            tasksViewModel.retryTask(task =
                                                 tasksFromRoom.first { it.id == task.id }.copy(
                                                     syncState = task.syncState
                                                 ) , taskCompletion = taskCompletions.firstOrNull { it.taskId == task.id })
@@ -446,22 +483,20 @@ fun HomeScreen(viewModel : MainViewModel) {
                                     }
                                     else{
                                         if(it){
-                                            viewModel.addTaskCompletion(currentTask){ e ->
+                                            taskCompletionsViewModel.addTaskCompletion(currentTask){ e ->
                                                 Toast.makeText(context, "Error :$e", Toast.LENGTH_SHORT)
                                                     .show()
                                             }
                                         }
                                         else{
-                                            viewModel.deleteTaskCompletion(taskCompletions.first{ it.taskId == currentTask.id }){ e->
+                                            taskCompletionsViewModel.deleteTaskCompletion(taskCompletions.first{ it.taskId == currentTask.id }){ e->
                                                 Toast.makeText(
                                                     context,
                                                     "Error :$e",
                                                     Toast.LENGTH_SHORT
                                                 )
                                                     .show()
-
                                             }
-
                                         }
                                     }
                                 }

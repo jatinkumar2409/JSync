@@ -81,7 +81,7 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                 session = client.webSocketSession{
                     url {
                         protocol = URLProtocol.WS
-                        host = "192.168.104.241"
+                        host = "192.168.138.241"
                         port = 8000
                         encodedPath = "/ws/tasks"
                         parameters.append("token" , token)
