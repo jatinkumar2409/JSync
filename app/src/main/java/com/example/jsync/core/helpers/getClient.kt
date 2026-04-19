@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 
 object GetClient {
     fun getClient(connectionTimeout : Long , requestTimeout : Long , socketTimeout : Long) = HttpClient {
+        expectSuccess=true
         install(ContentNegotiation){
             json(
                 Json {
@@ -20,7 +21,7 @@ object GetClient {
         install(DefaultRequest){
             url {
               protocol = URLProtocol.HTTP
-              host = "192.168.138.241"
+              host = "192.168.90.241"
               port = 8000
             }
         }

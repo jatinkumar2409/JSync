@@ -1,5 +1,6 @@
 package com.example.jsync.core.helpers
 
+import android.util.Log
 import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.delay
 
@@ -10,14 +11,16 @@ object RetryRequest {
         initialDelay : Long = 1000 ,
         block : suspend () -> T
     ) : T {
+        var retries = 0
+        var delayTime = initialDelay
          while (true){
-         var retries = 0
-         var delayTime = initialDelay
          try {
              return block()
          }
          catch (e : ClientRequestException){
+             Log.d("error1" , "error is ${e.message}")
             if(e.response.status.value == 401){
+                Log.d("tag" , "401 error coming...")
               val token =   authenticator.rotateAccessToken();
 
                 if(token.trim().isNotEmpty()) {
@@ -33,6 +36,7 @@ object RetryRequest {
              if(retries >= maxRetries) throw e
          }
         catch (e : Exception){
+            Log.d("error" , "error is ${e.message}")
           throw e
         }
         retries++

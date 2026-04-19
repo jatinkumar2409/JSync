@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -137,7 +138,7 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
 
     init {
         observeNetwork()
-        connectToWebSocket()
+//        connectToWebSocket()
         getNewTasks()
         loadTasksCompletionsOfDate()
     }
@@ -191,11 +192,13 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
 
         fun connectToWebSocket() {
             viewModelScope.launch {
-                webSocketsRepo.connect(
-                    onError = {
-                        error_.value = it
-                    }
-                )
+             val userId = prefDatastore.userId.firstOrNull() ?: return@launch
+                  webSocketsRepo.connect(
+                      userId = userId,
+                      onError = {
+                          error_.value = it
+                      }
+                  )
             }
         }
 

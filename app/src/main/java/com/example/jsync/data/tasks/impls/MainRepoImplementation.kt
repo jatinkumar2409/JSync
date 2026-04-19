@@ -41,29 +41,33 @@ class MainRepoImplementation(
     }
 
     override suspend fun loadTasksFromServer(toBeDeleted : Set<String> , onError : (String) -> Unit) {
-        Log.d("tag1" , "load tasks from server is calling")
-        val tasks = RetryRequest.callWithRetry(authenticator = tokenAuthenticator){
-            repo.getTasks()
-        }
-        tasks.onSuccess { it ->
-            Log.d("tag1" , "task is ${it.joinToString( " , ")}")
-            it.forEach { task ->
-                if (task.isDeleted) {
-                    Log.d("tag1" , "deleting task with ${task.taskName}")
-                    if(task.id in toBeDeleted) prefDatastore.removeToBeDeletedTasks(task.id)
-                   dao.deleteTask(task.toTaskEntity())
-                } else {
-                    if(task.id !in toBeDeleted){
-                        dao.upsertTask(task.toTaskEntity())
-                        Log.d("tag1" , "upserting the task")
+        try {
+            Log.d("tag1", "load tasks from server is calling")
+            val tasks = RetryRequest.callWithRetry(authenticator = tokenAuthenticator) {
+                repo.getTasks()
+            }
+            tasks.onSuccess { it ->
+                Log.d("tag1", "task is ${it.joinToString(" , ")}")
+                it.forEach { task ->
+                    if (task.isDeleted) {
+                        Log.d("tag1", "deleting task with ${task.taskName}")
+                        if (task.id in toBeDeleted) prefDatastore.removeToBeDeletedTasks(task.id)
+                        dao.deleteTask(task.toTaskEntity())
+                    } else {
+                        if (task.id !in toBeDeleted) {
+                            dao.upsertTask(task.toTaskEntity())
+                            Log.d("tag1", "upserting the task")
+                        }
                     }
                 }
+            }.onFailure {
+                Log.d("tag", "Error while loading tasks" + it.message.toString())
+                onError(it.message.toString())
             }
-        }.onFailure {
-            Log.d("tag" , "Error while loading tasks" +  it.message.toString())
-            onError(it.message.toString())
         }
-
+        catch(e : Exception){
+            onError(e.message.toString())
+        }
     }
 
     override fun getDisplayableTasks(userId : String): Flow<List<TaskEntity>> {

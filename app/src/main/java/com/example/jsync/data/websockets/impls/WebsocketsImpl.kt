@@ -2,6 +2,7 @@ package com.example.jsync.data.websockets.impls
 
 import android.util.Log
 import com.example.jsync.core.helpers.NetworkObserver
+import com.example.jsync.core.helpers.TokenAuthenticator
 import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.data.models.TaskDTO
 import com.example.jsync.data.models.WebsocketMessage
@@ -11,6 +12,7 @@ import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.http.URLProtocol
 import io.ktor.http.encodedPath
 import io.ktor.websocket.Frame
@@ -20,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -34,7 +37,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.Dispatcher
 
 class WebsocketsImpl(private val manageToken: manageToken ,
-    private val networkObserver: NetworkObserver) : WebSocketsRepo {
+    private val networkObserver: NetworkObserver , private val tokenAuthenticator: TokenAuthenticator) : WebSocketsRepo {
    private val client = HttpClient(io.ktor.client.engine.okhttp.OkHttp){
     install(WebSockets)
    }
@@ -50,14 +53,14 @@ class WebsocketsImpl(private val manageToken: manageToken ,
 
     private var connectionJob : Job? = null
 
-    override suspend fun connect(onError: (String) -> Unit) {
+    override suspend fun connect(userId : String , onError: (String) -> Unit) {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
                 networkObserver.observeNetwork().collectLatest { networkStatus ->
                     if(networkStatus){
                         connectionJob?.cancel()
                         connectionJob =  launch {
-                            manageConnection(onError)
+                            manageConnection(userId ,onError)
                         }
                     }
                     else{
@@ -68,7 +71,7 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                 }
         }
     }
-    private suspend fun manageConnection(onError : (String) -> Unit){
+    private suspend fun manageConnection(userId : String , onError : (String) -> Unit){
         while (currentCoroutineContext().isActive){
             try {
                 webscoketState_.value = WebsocketState.CONNECTING
@@ -81,10 +84,13 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                 session = client.webSocketSession{
                     url {
                         protocol = URLProtocol.WS
-                        host = "192.168.138.241"
+                        host = "192.168.90.241"
                         port = 8000
                         encodedPath = "/ws/tasks"
-                        parameters.append("token" , token)
+                        header("Authorization" , "Bearer $token")
+                        parameter("token" , token)
+                        parameter("userId" , userId)
+
                     }
                 }
                 webscoketState_.value = WebsocketState.CONNECTED
@@ -123,9 +129,22 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                     else -> {}
                 }
             }
+            val reason = session?.closeReason?.await()
+            if(reason?.code == 1008.toShort()){
+                tokenAuthenticator.rotateAccessToken()
+                currentCoroutineContext().cancel()
+                return
+            }
         }
         catch (e : Exception){
-            throw e
+            val reason = session?.closeReason?.await()
+            if(reason?.code == 1008.toShort()){
+                tokenAuthenticator.rotateAccessToken()
+                currentCoroutineContext().cancel()
+            }
+            else {
+                throw e
+            }
         }
     }
 

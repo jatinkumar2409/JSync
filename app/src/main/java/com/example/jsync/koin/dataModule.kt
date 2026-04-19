@@ -26,7 +26,7 @@ val dataModule = module {
     single<WebSocketsRepo> {
         WebsocketsImpl(
             get(),
-            get()
+            get() , get()
         )
     }
     single{
@@ -43,12 +43,12 @@ val dataModule = module {
     }
     single<MainRepository>{
         MainRepoImplementation(
-            get() , get() , get() , get(), get()
+            get() , get() , get() , get(), get() , get()
         )
     }
     single<TaskCompletionRepo>{
         TaskCompletionRepoImpl(
-            get() , get() , get()
+            get() , get() , get() , get()
         )
     }
     single<AskAiRepository>{

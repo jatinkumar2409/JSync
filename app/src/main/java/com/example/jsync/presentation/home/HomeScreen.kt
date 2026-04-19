@@ -90,7 +90,7 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
     LaunchedEffect(Unit) {
         if(networkStatus){
             Log.d("tag" , "load tasks has called")
-            tasksViewModel.loadTasks()
+//            tasksViewModel.loadTasks()
         }
 
     }
@@ -238,7 +238,7 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
             modifier = Modifier.fillMaxSize() ,
             isRefreshing = false , onRefresh ={
                 if (networkStatus){
-                    tasksViewModel.loadTasks()
+//                    tasksViewModel.loadTasks()
                 }
             }
         ) {

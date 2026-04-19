@@ -36,6 +36,7 @@ class TasksViewModel(
     val websocketState = webSocketsRepo.websocketState as StateFlow
     init {
         getAllTasks()
+        loadTasks()
     }
     fun getAllTasks(){
         viewModelScope.launch(Dispatchers.IO) {

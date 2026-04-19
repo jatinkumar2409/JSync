@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface WebSocketsRepo {
     val messages : Flow<WebsocketMessage>
     val websocketState : Flow<WebsocketState>
-    suspend fun connect(onError : (String) -> Unit)
+    suspend fun connect(userId : String , onError : (String) -> Unit)
     suspend fun sendTask(message : WebsocketMessage)
     suspend fun disconnect()
 }

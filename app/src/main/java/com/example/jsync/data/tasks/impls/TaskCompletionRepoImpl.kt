@@ -1,7 +1,10 @@
 package com.example.jsync.data.tasks.impls
 
+import android.util.Log
 import com.example.jsync.core.helpers.GetClient
+import com.example.jsync.core.helpers.RetryRequest
 import com.example.jsync.core.helpers.SyncSchedular
+import com.example.jsync.core.helpers.TokenAuthenticator
 import com.example.jsync.core.helpers.manageToken
 import com.example.jsync.core.helpers.timeHelper
 import com.example.jsync.data.models.ErrorResponse
@@ -11,6 +14,7 @@ import com.example.jsync.data.room.entities.SYNC_STATE
 import com.example.jsync.data.room.entities.TaskCompletion
 import com.example.jsync.domain.tasks.repos.TaskCompletionRepo
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -25,7 +29,8 @@ import kotlinx.coroutines.flow.Flow
 class TaskCompletionRepoImpl(
     private val taskCompletionDao : TaskCompletionDao ,
     private val manageToken : manageToken ,
-    private val syncSchedular: SyncSchedular
+    private val syncSchedular: SyncSchedular ,
+    private val tokenAuthenticator: TokenAuthenticator
 ) : TaskCompletionRepo {
     private val client = GetClient.getClient(connectionTimeout = 30_000L , requestTimeout = 30_000L , socketTimeout = 60_000L)
 
@@ -120,21 +125,20 @@ class TaskCompletionRepoImpl(
 
     override suspend fun loadTaskCompletionOfDateFromServer(date: Long): Result<List<TaskCompletionDTO>> {
         try {
+            Log.d("tag1" , "load tasks completions is being called")
             val startOfDay = timeHelper.getStartOfDay(date)
             val endOfDay = timeHelper.getEndOfDay(date)
-            val token = manageToken.getAccessToken() ?: ""
-            val response = client.get("/load_tasks_completions?startOfDay=$startOfDay&endOfDay=$endOfDay"){
+            val taskCompletions = RetryRequest.callWithRetry(authenticator = tokenAuthenticator){
+                val token = manageToken.getAccessToken() ?: ""
+               val response =  client.get("/load_task_completions?start_of_day=$startOfDay&end_of_day=$endOfDay"){
                 header("Authorization" , "Bearer $token")
             }
-            if (response.status.isSuccess()){
-                return Result.success(response.body<List<TaskCompletionDTO>>())
-            }
-            else{
-                val errorBody = response.body<ErrorResponse>()
-                return Result.failure(Exception(errorBody.detail))
-            }
+                response.body<List<TaskCompletionDTO>>()
+                }
+            return Result.success(taskCompletions)
         }
         catch (e : Exception){
+            Log.d("tag13" , "Error is ${e.message}")
             return Result.failure(e)
         }
     }
