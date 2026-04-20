@@ -17,6 +17,7 @@ import io.ktor.http.URLProtocol
 import io.ktor.http.encodedPath
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import io.ktor.websocket.readReason
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class WebsocketsImpl(private val manageToken: manageToken ,
     override suspend fun connect(userId : String , onError: (String) -> Unit) {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
+            Log.d("tag" , "Connecting to websocket ....")
                 networkObserver.observeNetwork().collectLatest { networkStatus ->
                     if(networkStatus){
                         connectionJob?.cancel()
@@ -76,6 +78,7 @@ class WebsocketsImpl(private val manageToken: manageToken ,
             try {
                 webscoketState_.value = WebsocketState.CONNECTING
                 val token = manageToken.getAccessToken()
+                Log.d("ws" , "running loop with token $token")
                 if(token == null){
                     delay(2000)
                     continue
@@ -84,7 +87,7 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                 session = client.webSocketSession{
                     url {
                         protocol = URLProtocol.WS
-                        host = "192.168.90.241"
+                        host = "192.168.230.241"
                         port = 8000
                         encodedPath = "/ws/tasks"
                         header("Authorization" , "Bearer $token")
@@ -121,23 +124,31 @@ class WebsocketsImpl(private val manageToken: manageToken ,
                             message
                         )
                         if(message.type == "error"){
+                            if (message.error == "TOKEN_EXPIRED"){
+                                tokenAuthenticator.rotateAccessToken()
+                                currentCoroutineContext().cancel()
+                                return
+                            }
                             onError(
                                 message.error!!
                             )
                         }
                     }
+                    is Frame.Close -> {
+                        val reason = frame.readReason()
+                        if(reason?.code == 1008.toShort()){
+                            tokenAuthenticator.rotateAccessToken()
+                            currentCoroutineContext().cancel()
+                            return
+                        }
+                    }
                     else -> {}
                 }
-            }
-            val reason = session?.closeReason?.await()
-            if(reason?.code == 1008.toShort()){
-                tokenAuthenticator.rotateAccessToken()
-                currentCoroutineContext().cancel()
-                return
             }
         }
         catch (e : Exception){
             val reason = session?.closeReason?.await()
+            Log.d("tag" , "close reason is ${reason?.code}")
             if(reason?.code == 1008.toShort()){
                 tokenAuthenticator.rotateAccessToken()
                 currentCoroutineContext().cancel()

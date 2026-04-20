@@ -138,11 +138,19 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
 
     init {
         observeNetwork()
-//        connectToWebSocket()
+        connectToWebSocket()
         getNewTasks()
-        loadTasksCompletionsOfDate()
+        loadTasksCompletionsOfDateWithNetworkObserver()
     }
-
+    fun loadTasksCompletionsOfDateWithNetworkObserver(){
+        viewModelScope.launch(Dispatchers.IO) {
+            networkObserver.observeNetwork().collect { it ->
+                if (it) {
+                    loadTasksCompletionsOfDate()
+                }
+                }
+        }
+    }
     fun updateSelectedDate(date: Long) {
         selectedDate_.value = date
     }
@@ -150,8 +158,11 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
     fun loadTasksCompletionsOfDate() {
         viewModelScope.launch {
             try {
+                val toBeDeleted = prefDatastore.getToBeDeletedTaskCompletions().first()
                 selectedDate_.collect { date ->
-                    taskCompletionRepo.loadTaskCompletionOfDateFromServer(date)
+                    taskCompletionRepo.loadTaskCompletionOfDateFromServer( toBeDeleted,date){
+                        error_.value = it
+                    }
                 }
             } catch (e: Exception) {
                 error_.value = e.message.toString()
@@ -250,7 +261,7 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
                             )
                         }
                         if (message.type == "error_for_task_completion") {
-
+                            error_.value = message.error
                         }
 
                     } else if (message.type == "task_completion") {

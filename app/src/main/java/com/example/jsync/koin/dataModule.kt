@@ -48,7 +48,7 @@ val dataModule = module {
     }
     single<TaskCompletionRepo>{
         TaskCompletionRepoImpl(
-            get() , get() , get() , get()
+            get() , get() , get() , get() , get()
         )
     }
     single<AskAiRepository>{

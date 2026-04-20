@@ -26,11 +26,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +80,7 @@ import com.example.jsync.ui.theme.blue80
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskCompletionsViewModel: TaskCompletionsViewModel , askAiViewModel : AskAiViewModel) {
+fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskCompletionsViewModel: TaskCompletionsViewModel , askAiViewModel : AskAiViewModel , onSettingsClicked : () -> Unit , onAboutClicked : () -> Unit) {
     val tasks by viewModel.tasksOfDate.collectAsStateWithLifecycle()
     val taskCompletions by viewModel.taskCompletions.collectAsStateWithLifecycle()
     val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
@@ -86,13 +89,6 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     var showAskAiModal by remember {
         mutableStateOf(false)
-    }
-    LaunchedEffect(Unit) {
-        if(networkStatus){
-            Log.d("tag" , "load tasks has called")
-//            tasksViewModel.loadTasks()
-        }
-
     }
     Log.d("tag1" , "tasks from room is ${tasks.joinToString(" , ")}")
     Log.d("tag4" , "tasks from room is ${tasksFromRoom.joinToString(" , ")}")
@@ -119,15 +115,30 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
     var showCalenderDialog by remember {
         mutableStateOf(false)
     }
+    var menuExpanded by remember {
+        mutableStateOf(false)
+    }
+
     val filteredTasks by remember {
         derivedStateOf {
-            if (selTags.isEmpty()) tasks
-            else tasks.filter { task ->
-                task.tags.split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .any { it in selTags }
+            var result = tasks
+
+            // Apply "Undone" filter if selected
+            if ("Undone" in selTags) {
+                result = result.filter { !it.hasDone }
             }
+
+            val actualTags = selTags - "Undone"
+            if (actualTags.isNotEmpty()) {
+                result = result.filter { task ->
+                    task.tags.split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .any { it in actualTags }
+                }
+            }
+
+            result
         }
     }
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -238,7 +249,8 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
             modifier = Modifier.fillMaxSize() ,
             isRefreshing = false , onRefresh ={
                 if (networkStatus){
-//                    tasksViewModel.loadTasks()
+                    tasksViewModel.loadTasks()
+                    viewModel.loadTasksCompletionsOfDate()
                 }
             }
         ) {
@@ -302,13 +314,46 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = timeHelper.formatDate(selectedDate), color = Color.DarkGray)
                         }
-                        IconButton(onClick = {
-                            showCalenderDialog = true
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Calender"
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = {
+                                showCalenderDialog = true
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Calender"
+                                )
+                            }
+                            IconButton(onClick = {
+                                menuExpanded = !menuExpanded
+                            }){
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded , onDismissRequest = {
+                                    menuExpanded = false
+                                }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(text = "Settings") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onSettingsClicked()
+
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(text = "About") },
+                                    onClick = {
+                                      menuExpanded = false
+                                        onAboutClicked()
+                                    }
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -411,8 +456,8 @@ fun HomeScreen(viewModel : MainViewModel ,tasksViewModel: TasksViewModel , taskC
                                             )
                                         )
                                         .clickable {
-                                            if (tag in selTags) selTags.remove(tag)
-                                            else selTags.add(tag)
+                                                if (tag in selTags) selTags.remove(tag)
+                                                else selTags.add(tag)
                                         }
                                 ) {
                                     Text(

@@ -6,7 +6,9 @@ import com.example.jsync.core.helpers.RetryRequest
 import com.example.jsync.core.helpers.SyncSchedular
 import com.example.jsync.core.helpers.TokenAuthenticator
 import com.example.jsync.core.helpers.manageToken
+import com.example.jsync.core.helpers.prefDatastore
 import com.example.jsync.core.helpers.timeHelper
+import com.example.jsync.core.helpers.toTaskCompletion
 import com.example.jsync.data.models.ErrorResponse
 import com.example.jsync.data.models.TaskCompletionDTO
 import com.example.jsync.data.room.Daos.TaskCompletionDao
@@ -30,7 +32,8 @@ class TaskCompletionRepoImpl(
     private val taskCompletionDao : TaskCompletionDao ,
     private val manageToken : manageToken ,
     private val syncSchedular: SyncSchedular ,
-    private val tokenAuthenticator: TokenAuthenticator
+    private val tokenAuthenticator: TokenAuthenticator ,
+    private val prefDatastore: prefDatastore
 ) : TaskCompletionRepo {
     private val client = GetClient.getClient(connectionTimeout = 30_000L , requestTimeout = 30_000L , socketTimeout = 60_000L)
 
@@ -93,6 +96,7 @@ class TaskCompletionRepoImpl(
             }
             if(response.status.isSuccess()){
                 return Result.success(true)
+
             }
             else{
                 val errorBody = response.body<ErrorResponse>()
@@ -123,7 +127,7 @@ class TaskCompletionRepoImpl(
         }
     }
 
-    override suspend fun loadTaskCompletionOfDateFromServer(date: Long): Result<List<TaskCompletionDTO>> {
+    override suspend fun loadTaskCompletionOfDateFromServer(toBeDeleted : Set<String> ,date: Long , onError : (String) -> Unit) {
         try {
             Log.d("tag1" , "load tasks completions is being called")
             val startOfDay = timeHelper.getStartOfDay(date)
@@ -135,11 +139,21 @@ class TaskCompletionRepoImpl(
             }
                 response.body<List<TaskCompletionDTO>>()
                 }
-            return Result.success(taskCompletions)
+             taskCompletions.forEach { taskCompletionDTO ->
+                 if (taskCompletionDTO.isDeleted){
+                     taskCompletionDao.deleteTaskCompletion(taskCompletionDTO.toTaskCompletion())
+                 }
+                 else{
+                     if (taskCompletionDTO.id !in toBeDeleted){
+                         taskCompletionDao.upsertTaskCompletion(taskCompletionDTO.toTaskCompletion())
+                     }
+                 }
+             }
+
         }
         catch (e : Exception){
             Log.d("tag13" , "Error is ${e.message}")
-            return Result.failure(e)
+            onError(e.message.toString())
         }
     }
 
@@ -183,6 +197,7 @@ class TaskCompletionRepoImpl(
                 )
             )
         }
+        prefDatastore.saveToBeDeletedTaskCompletions(taskCompletion.id)
         syncSchedular.enqueueSync()
     }
 

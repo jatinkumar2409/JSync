@@ -12,7 +12,7 @@ interface TaskCompletionRepo {
     suspend fun updateTaskCompletionStateIfUnchanged(fromState : SYNC_STATE , toState : SYNC_STATE , id : String) : Int
     suspend fun deleteTaskCompletionToServer(id: String): Result<Boolean>
     suspend fun loadTasksCompletion(): Result<List<TaskCompletionDTO>>
-    suspend fun loadTaskCompletionOfDateFromServer(date: Long): Result<List<TaskCompletionDTO>>
+    suspend fun loadTaskCompletionOfDateFromServer(toBeDeleted : Set<String>  ,date: Long , onError : (String) -> Unit)
 
     suspend fun getTaskCompletionsOfDate(date : Long , userId : String) : Flow<List<TaskCompletion>>
 

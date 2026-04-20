@@ -7,3 +7,8 @@ import kotlinx.serialization.Serializable
 data object AuthScreen : NavKey
 @Serializable
 data object HomeScreen : NavKey
+@Serializable
+data object SettingsScreen : NavKey
+
+@Serializable
+data object AboutScreen : NavKey

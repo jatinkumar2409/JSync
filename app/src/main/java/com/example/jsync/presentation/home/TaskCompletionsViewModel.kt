@@ -3,6 +3,7 @@ package com.example.jsync.presentation.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.jsync.core.helpers.NetworkObserver
 import com.example.jsync.core.helpers.toTaskCompletion
 import com.example.jsync.core.helpers.toTaskCompletionDto
 import com.example.jsync.data.models.TaskCompletionDTO

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jsync.MainActivity
+import com.example.jsync.core.helpers.NetworkObserver
 import com.example.jsync.core.helpers.prefDatastore
 import com.example.jsync.core.helpers.toTaskCompletionDto
 import com.example.jsync.core.helpers.toTaskDto
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class TasksViewModel(
+    private val networkObserver: NetworkObserver ,
   private val mainRepo : MainRepository ,private val prefDatastore: prefDatastore ,private val webSocketsRepo: WebSocketsRepo ,
     private val taskCompletionRepo: TaskCompletionRepo
 ) : ViewModel() {
@@ -36,12 +38,21 @@ class TasksViewModel(
     val websocketState = webSocketsRepo.websocketState as StateFlow
     init {
         getAllTasks()
-        loadTasks()
+        loadTasksWithNetworkStatus()
     }
     fun getAllTasks(){
         viewModelScope.launch(Dispatchers.IO) {
             mainRepo.getAllTasks().collect { tasks ->
                 Log.d("tasksTag"  , "All tasks are $tasks")
+            }
+        }
+    }
+    fun loadTasksWithNetworkStatus(){
+        viewModelScope.launch(Dispatchers.IO){
+            networkObserver.observeNetwork().collect { it ->
+                if (it){
+                    loadTasks()
+                }
             }
         }
     }

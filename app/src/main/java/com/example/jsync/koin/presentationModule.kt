@@ -5,6 +5,7 @@ import com.example.jsync.presentation.home.AskAiViewModel
 import com.example.jsync.presentation.home.MainViewModel
 import com.example.jsync.presentation.home.TaskCompletionsViewModel
 import com.example.jsync.presentation.home.TasksViewModel
+import com.example.jsync.presentation.settings.SettingsViewModel
 import org.koin.dsl.module
 
 val presentationModule = module {
@@ -19,12 +20,15 @@ val presentationModule = module {
     }
     single{
         TasksViewModel(
-            get() , get() , get() , get()
+            get() , get() , get() , get() , get()
         )
     }
     single{
         TaskCompletionsViewModel(
             get() , get()
         )
+    }
+    single {
+        SettingsViewModel(get() , get())
     }
     }

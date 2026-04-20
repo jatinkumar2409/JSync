@@ -173,7 +173,7 @@ class SyncWorkerForTasks(
                             val result = repo.deleteTask(taskCompletion.id)
                             Log.d("WORKER", "deleteTask result: $result")
                             if(result.isSuccess){ taskCompletionDao.deleteTaskCompletion(taskCompletion)
-//                                prefDatastore.removeToBeDeleted(task.id)
+                                prefDatastore.removeToBeDeletedTaskCompletions(taskCompletion.id)
                             }
                             else{
                                 taskCompletionDao.upsertTaskCompletion(
