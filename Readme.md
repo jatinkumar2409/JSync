@@ -36,13 +36,11 @@
 
 ## 📸 Screenshots & Demo
 
-> Add your screenshots and demo videos here
 
-```
-/assets/screenshots/home.png
-/assets/screenshots/task_detail.png
-/assets/demo/demo.mp4
-```
+https://github.com/user-attachments/assets/a6fd2a66-fd71-4abf-b733-3d79c7e03166
+
+
+<img width="180" height="480" alt="Screenshot_20260422-172735" src="https://github.com/user-attachments/assets/e34fa3d9-2344-4c02-ac7a-8d7e9129b562" /><img width="180" height="480" alt="Screenshot_20260422-172745" src="https://github.com/user-attachments/assets/fe3d8908-a8e3-41f7-a997-df4c360c8e9b" />
 
 ---
 
@@ -71,7 +69,7 @@
 
 ```bash
 # Clone repo
- git clone https://github.com/yourusername/jsync-backend.git
+ git clone https://github.com/jatinkumar2409/JSync_Backend.git
  cd jsync-backend
 
 # Create virtual environment
@@ -91,7 +89,7 @@
 
 ```bash
 # Clone repo
- git clone https://github.com/yourusername/jsync-android.git
+ git clone https://github.com/jatinkumar2409/JSync.git
 
 # Open in Android Studio
 # Sync Gradle & Run on emulator/device
@@ -135,10 +133,9 @@ Local DB (Room) + Remote (WebSocket API)
 ## 🔁 Sync Strategy
 
 * Local-first writes
-* Operation queue
+* WorkManager enqueue
 * Retry with exponential backoff
-* Conflict resolution (last-write-wins or custom logic)
-
+* Conflict resolution
 ---
 
 ## 📂 Project Structure
@@ -149,8 +146,7 @@ jsync/
  ├── data/
  ├── domain/
  ├── presentation/
- ├── backend/
- └── docs/
+ ├── helpers/
 ```
 
 ---
