@@ -102,7 +102,7 @@ https://github.com/user-attachments/assets/a6fd2a66-fd71-4abf-b733-3d79c7e03166
 ### WebSocket Endpoint
 
 ```
-/ws/tasks?userId=<USER_ID>
+/ws/tasks?token=<TOKEN>&userId=<USER_ID>
 ```
 
 ### Supported Events
@@ -148,15 +148,6 @@ jsync/
  ├── presentation/
  ├── helpers/
 ```
-
----
-
-## 🛠️ Future Improvements
-
-* 🔐 Authentication & Authorization
-* 📊 Task analytics & insights
-* 🌍 Multi-device sync enhancements
-* 🧩 Plugin support
 
 ---
 
