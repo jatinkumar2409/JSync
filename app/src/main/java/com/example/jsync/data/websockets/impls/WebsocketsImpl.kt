@@ -185,12 +185,16 @@ class WebsocketsImpl(private val manageToken: manageToken ,
 
     override suspend fun sendTask(message : WebsocketMessage) {
         Log.d("websocket" , "Sending message $message")
-        val json = Json.encodeToString(message)
+        val json = Json {
+            encodeDefaults = true
+            explicitNulls = true
+        }
+        val jsonString = json.encodeToString(message)
         try {
             if(session == null) return
             if(websocketState.value == WebsocketState.DISCONNECTED) return
             if(websocketState.value == WebsocketState.CONNECTING) delay(2000);
-                session?.send(Frame.Text(json))
+                session?.send(Frame.Text(jsonString))
 
         }catch (e : Exception){
             markDisconnected()

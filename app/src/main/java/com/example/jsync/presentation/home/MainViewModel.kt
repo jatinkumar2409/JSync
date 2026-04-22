@@ -286,7 +286,7 @@ class MainViewModel(private val networkObserver: NetworkObserver ,
                 removeTask(
                     task.id
                 )
-                Log.d("tag1" , "Updated task is $task")
+                Log.d("tag1444444" , "Updated task is $taskDTO")
                 webSocketsRepo.sendTask(
                     WebsocketMessage(
                         type = "update_task", task = taskDTO
